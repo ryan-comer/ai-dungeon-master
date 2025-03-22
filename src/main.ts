@@ -7,8 +7,15 @@ const coreManager = new CoreManager();
 coreManager.initialize();
 
 // Create a campaign
-coreManager.createSetting().then(async (settingName: string) => {
-    await coreManager.createCampaign(settingName).then(async (campaignName: string) => {
-        await coreManager.createStoryline(settingName, campaignName, 0)
+const settingPrompt: string = "A fantasy setting with a dark and gritty tone.";
+const campaignPrompt: string = "The players have to find the sword of 1000 truths to defeat the dark lord.";
+coreManager.createSetting(settingPrompt).then(async (settingName: string) => {
+    await coreManager.createCampaign(settingName, campaignPrompt).then(async (campaignName: string) => {
+        const campaign: string = await coreManager.getCampaign(settingName, campaignName);
+        const campaignJson: any = JSON.parse(campaign);
+
+        for (let i = 0; i < campaignJson.milestones.length; i++) {
+            await coreManager.createStoryline(settingName, campaignName, i, campaignJson.milestones[i].description);
+        }
     })
 })

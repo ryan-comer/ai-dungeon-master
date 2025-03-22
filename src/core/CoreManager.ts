@@ -12,24 +12,33 @@ class CoreManager implements ICoreManager {
     initialize(): void {
         console.log("Initializing the core manager...");
     }
+
     async createSetting(userPrompt: string = ""): Promise<string> {
         console.log("Creating a setting...");
         const settingName: string = await this.campaignManager.createSetting(userPrompt);
         return settingName;
     }
-    async createCampaign(setting: string, userPrompt: string = ""): Promise<string> {
+    async createCampaign(settingName: string, userPrompt: string = ""): Promise<string> {
         console.log("Creating a campaign...");
-        const campaignName: string = await this.campaignManager.createCampaign(setting, userPrompt);
+        const campaignName: string = await this.campaignManager.createCampaign(settingName, userPrompt);
         return campaignName;
     }
-    async createStoryline(setting: string, campaign: string, milestoneIndex: number, userPrompt: string = ""): Promise<string> {
+    async createStoryline(settingName: string, campaignName: string, milestoneIndex: number, userPrompt: string = ""): Promise<string> {
         console.log("Creating a storyline...");
-        const storylineName: string = await this.campaignManager.createStoryline(setting, campaign, milestoneIndex, userPrompt);
+        const storylineName: string = await this.campaignManager.createStoryline(settingName, campaignName, milestoneIndex, userPrompt);
         return storylineName;
     }
-    loadCampaign(): void {
-        console.log("Loading a campaign...");
+
+    async getSetting(settingName: string): Promise<string> {
+        return this.campaignManager.getSetting(settingName);
     }
+    async getCampaign(settingName: string, campaignName: string): Promise<string> {
+        return this.campaignManager.getCampaign(settingName, campaignName);
+    }
+    async getStoryline(settingName: string, campaignName: string, storylineName: string): Promise<string> {    
+        return this.campaignManager.getStoryline(settingName, campaignName, storylineName);
+    }
+
 }
 
 export { CoreManager };

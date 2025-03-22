@@ -36,35 +36,42 @@ class OllamaClient implements ITextGenerationClient {
             throw new Error(`Failed to generate text: ${response.statusText}`);
         }
 
-        /*
-        const data = await response.json();
-        const responseText = data.response;
-
-        // Strip anything before the first { and after the last }
-        const firstBracket = responseText.indexOf("{");
-        const lastBracket = responseText.lastIndexOf("}");
-        return responseText.substring(firstBracket, lastBracket + 1);
-        */
-
         const reader = response.body?.getReader();
         if (!reader) {
             throw new Error("Failed to read response body");
         }
 
         let finalText = "";
+        let buffer = ""; // Buffer to accumulate chunks
         const decoder = new TextDecoder();
 
         while (true) {
             const { done, value } = await reader.read();
             if (done) break;
-            const response = JSON.parse(decoder.decode(value, { stream: false }));
-            finalText += response.response;
+
+            buffer += decoder.decode(value, { stream: true });
+
+            // Attempt to parse JSON from the buffer
+            let boundary = buffer.lastIndexOf("}");
+            if (boundary !== -1) {
+                const validChunk = buffer.substring(0, boundary + 1);
+                buffer = buffer.substring(boundary + 1); // Keep the remaining incomplete part
+
+                try {
+                    const response = JSON.parse(validChunk);
+                    finalText += response.response;
+                } catch (e) {
+                    console.error("Failed to parse JSON chunk:", e);
+                }
+            }
         }
 
         // Strip anything before the first { and after the last }
         const firstBracket = finalText.indexOf("{");
         const lastBracket = finalText.lastIndexOf("}");
         finalText = finalText.substring(firstBracket, lastBracket + 1);
+
+        console.log(finalText);
 
         return finalText
     }

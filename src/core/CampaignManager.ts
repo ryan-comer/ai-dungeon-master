@@ -187,11 +187,10 @@ class CampaignManager implements ICampaignManager {
         The storyline should only be a part of the larger campaign, not the whole thing.
         The purpose of the storyline is to be a self-contained portion of the larger campaign that builds towards the campaign's goals.
         If the campaign is to save the world, the storyline could be about finding a powerful artifact that will help in the final battle.
-        The storyline should describe the people, places, and events that the players will encounter.
-        The storyline should have a clear goal or objective for the players to achieve.
 
         The storyline should be for the following milestone in the campaign. Make sure the storyline's objective aligns with the milestone's description.
         Here is the milestone to base the storyline on:
+
         ${milestone.toString()}
 
         Give me the storyline in the following JSON format:
@@ -239,19 +238,19 @@ class CampaignManager implements ICampaignManager {
         const storyline: string = await this.textGenerationClient.generateText(prompt);
         console.log(storyline)
         const storylineJson = JSON.parse(storyline);
-        this.fileStore.saveFile(this.getStorylinePath(settingName, campaignName, storylineJson.name), storyline);
+        this.fileStore.saveFile(this.getStorylinePath(settingName, campaignName, `${milestoneIndex}_${storylineJson.name}`), storyline);
 
         return storylineJson.name;
     }
 
-    deleteCampaign(): void {
-        console.log("Deleting a campaign...");
+    async getSetting(settingName: string): Promise<string> {
+        return this.fileStore.loadFile(this.getSettingPath(settingName));
     }
-    updateCampaign(): void {
-        console.log("Updating a campaign...");
+    async getCampaign(settingName: string, campaignName: string): Promise<string> {
+        return this.fileStore.loadFile(this.getCampaignPath(settingName, campaignName));
     }
-    getCampaign(name: string): void {
-        console.log("Getting a campaign...");
+    async getStoryline(settingName: string, campaignName: string, storylineName: string): Promise<string> {
+        return this.fileStore.loadFile(this.getStorylinePath(settingName, campaignName, storylineName));
     }
 
     // Helper functions to get paths
