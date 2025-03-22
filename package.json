@@ -1,0 +1,15 @@
+{
+  "name": "ai-dungeon-master",
+  "type": "module",
+  "version": "1.0.0",
+  "description": "An AI dungeon master that integrates with FoundryVTT",
+  "main": "src/main.ts",
+  "scripts": {
+    "start": "tsx ./src/main.ts"
+  },
+  "author": "Ryan Comer",
+  "license": "ISC",
+  "dependencies": {
+    "tsx": "^4.19.3"
+  }
+}
