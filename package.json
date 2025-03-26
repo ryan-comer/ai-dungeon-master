@@ -10,6 +10,11 @@
   "author": "Ryan Comer",
   "license": "ISC",
   "dependencies": {
+    "dotenv": "^16.4.7",
+    "fp-ts": "^2.16.9",
+    "io-ts": "^2.2.22",
+    "ollama": "^0.5.14",
+    "openai": "^4.89.0",
     "tsx": "^4.19.3"
   }
 }

@@ -1,4 +1,5 @@
 import { CoreManager } from "./core/CoreManager";
+import 'dotenv/config';
 
 // Create a new instance of the core manager
 const coreManager = new CoreManager();
