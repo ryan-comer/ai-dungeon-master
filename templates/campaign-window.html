@@ -1,0 +1,31 @@
+<!-- Window for the player to create and manage campaigns -->
+<div id="campaign-window">
+    <h1>Campaign Manager</h1>
+    
+    <div id="setting-selection">
+        <label for="setting-list">Select a Setting:</label>
+        <select id="setting-list">
+            <!-- Options will be dynamically populated -->
+        </select>
+    </div>
+
+    <div id="setting-creation">
+        <label for="setting-prompt">Setting Prompt:</label>
+        <input type="text" id="setting-prompt" placeholder="Enter a prompt for the new setting" />
+        <button id="create-setting-btn">Create New Setting</button>
+    </div>
+    
+    <div id="campaign-selection">
+        <label for="campaign-list">Select a Campaign:</label>
+        <select id="campaign-list" disabled>
+            <!-- Options will be dynamically populated -->
+        </select>
+        <button id="load-campaign-btn" disabled>Load Campaign</button>
+    </div>
+
+    <div id="campaign-creation">
+        <label for="campaign-prompt">Campaign Prompt:</label>
+        <input type="text" id="campaign-prompt" placeholder="Enter a prompt for the new campaign" disabled />
+        <button id="create-campaign-btn" disabled>Create New Campaign</button>
+    </div>
+</div>

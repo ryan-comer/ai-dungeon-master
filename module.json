@@ -1,0 +1,17 @@
+{
+  "name": "ai-dungeon-master",
+  "title": "AI Dungeon Master",
+  "description": "An AI Dungeon Master for Foundry VTT",
+  "version": "0.1.0",
+  "minimumCoreVersion": "0.8.6",
+  "author": "Ryan Comer",
+  "styles": [
+    "styles/main-window.css"
+  ],
+  "esmodules": [
+    "scripts/module.js",
+    "scripts/main-window.js",
+    "scripts/campaign-window.js"
+  ],
+  "dependencies": []
+}
