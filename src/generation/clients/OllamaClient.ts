@@ -10,7 +10,7 @@ class OllamaClient implements ITextGenerationClient {
         this.model = model;
     }
 
-    async generateText(prompt: string): Promise<string> {
+    async generateText(prompt: string, optionsOverride?: any): Promise<string> {
         while (true) {
             try {
                 const response = await ollama.chat({
@@ -23,6 +23,7 @@ class OllamaClient implements ITextGenerationClient {
                         //num_ctx: 2500,
                         num_ctx: 15000,
                         //temperature: 1.0
+                        ...optionsOverride
                     }
                 })
 
@@ -34,6 +35,14 @@ class OllamaClient implements ITextGenerationClient {
             // Sleep for a second before retrying
             await new Promise(resolve => setTimeout(resolve, 1000));
         }
+    }
+
+    async unloadModel(): Promise<void> {
+        await ollama.generate({
+            prompt: "unload",
+            model: this.model,
+            keep_alive: 0
+        });
     }
 }
 

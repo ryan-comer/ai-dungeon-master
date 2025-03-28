@@ -1,6 +1,9 @@
 import { IFileStore } from "./interfaces/IFileStore";
+import { EntityType } from "../core/SemanticIndex";
 import * as fs from "fs";
 import * as path from "path";
+import { Setting } from "../core/campaigns/models/Setting";
+import { Campaign } from "../core/campaigns/models/Campaign";
 
 class FileSystemStore implements IFileStore {
     saveFile(filePath: string, fileContent: string): void {
@@ -9,6 +12,11 @@ class FileSystemStore implements IFileStore {
             fs.mkdirSync(dir, { recursive: true });
         }
         fs.writeFileSync(filePath, fileContent, "utf8");
+    }
+
+    saveImage(filePath: string, base64Image: string) {
+        const buffer: Buffer = Buffer.from(base64Image, "base64");
+        fs.writeFileSync(filePath, buffer);
     }
 
     loadFile(filePath: string): string {
@@ -49,6 +57,18 @@ class FileSystemStore implements IFileStore {
     }
     getItemsPath(settingName: string, campaignName: string): string {
         return `./settings/${this.stripInvalidFilenameChars(settingName)}/${this.stripInvalidFilenameChars(campaignName)}/items`;
+    }
+
+    // Get the base path for the entity type
+    getEntityBasePath(setting: Setting, campaign: Campaign, entityType: EntityType): string {
+        const basePath: string = {
+            [EntityType.Character]: this.getCharacterPath(setting.name, campaign.name),
+            [EntityType.Location]: this.getLocationsPath(setting.name, campaign.name),
+            [EntityType.Faction]: this.getFactionsPath(setting.name, campaign.name),
+            [EntityType.Item]: this.getItemsPath(setting.name, campaign.name)
+        }[entityType];
+
+        return basePath
     }
 
     stripInvalidFilenameChars(name: string): string {

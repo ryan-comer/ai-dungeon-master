@@ -4,16 +4,18 @@ import OpenAI from "openai";
 
 class OpenAIClient implements ITextGenerationClient {
     private openai: OpenAI;
+    private model: string;
 
-    constructor(apiKey: string) {
+    constructor(apiKey: string, model: string = "gpt-4o") {
         this.openai = new OpenAI({
             apiKey: apiKey
         });
+        this.model = model;
     }
 
-    async generateText(prompt: string): Promise<string> {
+    async generateText(prompt: string, optionsOverride?: any): Promise<string> {
         const response = await this.openai.chat.completions.create({
-            model: "gpt-4o",
+            model: this.model,
             messages: [
                 {
                     role: "system",
@@ -23,7 +25,8 @@ class OpenAIClient implements ITextGenerationClient {
                     role: "user",
                     content: prompt
                 }
-            ]
+            ],
+            ...optionsOverride
         })
 
         // Check if the message has content
@@ -31,11 +34,15 @@ class OpenAIClient implements ITextGenerationClient {
             throw new Error("Failed to generate text");
         }
 
+        console.log(JSON.stringify(response, null, '\t'));
+
         let text = response.choices[0].message.content;
-        text = TryParseJson(text, true);
-        console.log(text);
 
         return text
+    }
+
+    async unloadModel(): Promise<void> {
+        // No need to unload the model
     }
 }
 

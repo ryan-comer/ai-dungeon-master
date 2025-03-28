@@ -1,5 +1,5 @@
 interface ISemanticIndex {
-    getEntity(entityType: EntityType, prompt: string): Promise<string | null>;
+    getEntity(entityType: EntityType, context: string): Promise<string | null>;
     addEntity(entityType: EntityType, name: string, context: string, jsonData: string): Promise<void>;
 }
 

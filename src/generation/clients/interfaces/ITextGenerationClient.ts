@@ -1,5 +1,6 @@
 interface ITextGenerationClient {
-    generateText(prompt: string): Promise<string>;
+    generateText(prompt: string, optionsOverride?: any): Promise<string>;
+    unloadModel(): Promise<void>;
 }
 
 export { ITextGenerationClient };
