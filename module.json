@@ -6,7 +6,8 @@
   "minimumCoreVersion": "0.8.6",
   "author": "Ryan Comer",
   "styles": [
-    "styles/main-window.css"
+    "styles/main-window.css",
+    "styles/campaign-window.css"
   ],
   "esmodules": [
     "scripts/module.js",

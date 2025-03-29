@@ -31,6 +31,21 @@ class Campaign {
         description: string;
         objective: string;
     }[];
+
+    constructor() {
+        this.name = '';
+        this.description = '';
+        this.objectives = [];
+        this.overview = {
+            description: '',
+            objective: '',
+            premise: '',
+        };
+        this.factions = [];
+        this.characters = [];
+        this.locations = [];
+        this.milestones = [];
+    }
 }
 
 const CampaignCodec = t.type({

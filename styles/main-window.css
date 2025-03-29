@@ -16,12 +16,18 @@
     margin-right: 0px;
 }
 
-#settings-button {
+#ai-dm-settings-button {
     background: none;
     border: none;
-    font-size: 1.5rem;
+    font-size: 1rem; /* Reduced size */
     cursor: pointer;
-    padding: 0px;
+    padding: 5px; /* Adjusted padding */
+    color: #555;
+    transition: color 0.3s ease;
+}
+
+#ai-dm-settings-button:hover {
+    color: #000;
 }
 
 .ai-dm-status-message {

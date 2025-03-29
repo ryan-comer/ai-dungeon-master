@@ -9,23 +9,27 @@
         </select>
     </div>
 
-    <div id="setting-creation">
-        <label for="setting-prompt">Setting Prompt:</label>
-        <input type="text" id="setting-prompt" placeholder="Enter a prompt for the new setting" />
-        <button id="create-setting-btn">Create New Setting</button>
-    </div>
-    
     <div id="campaign-selection">
         <label for="campaign-list">Select a Campaign:</label>
         <select id="campaign-list" disabled>
             <!-- Options will be dynamically populated -->
         </select>
         <button id="load-campaign-btn" disabled>Load Campaign</button>
+        <label for="campaign-loaded">Loaded Campaign:</label>
+        <div id="campaign-loaded" class="hidden">
+            None
+        </div>
     </div>
 
+    <div id="setting-creation">
+        <label for="setting-prompt">Create a New Setting:</label>
+        <input type="text" id="setting-prompt" placeholder="Enter a prompt for the new setting" />
+        <button id="create-setting-btn">Create Setting</button>
+    </div>
+    
     <div id="campaign-creation">
-        <label for="campaign-prompt">Campaign Prompt:</label>
+        <label for="campaign-prompt">Create a New Campaign:</label>
         <input type="text" id="campaign-prompt" placeholder="Enter a prompt for the new campaign" disabled />
-        <button id="create-campaign-btn" disabled>Create New Campaign</button>
+        <button id="create-campaign-btn" disabled>Create Campaign</button>
     </div>
 </div>

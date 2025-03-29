@@ -46,8 +46,21 @@ class Faction {
         hooks: string[];
     };
 
-    constructor(data: Partial<Faction>) {
-        Object.assign(this, data);
+    constructor(data: Partial<Faction> = {}) {
+        this.name = data.name || '';
+        this.description = data.description || '';
+        this.alignment = data.alignment || '';
+        this.goals = data.goals || [];
+        this.philosophy = data.philosophy || '';
+        this.history = data.history || { founded: '', founder: '', origin: '' };
+        this.members = data.members || [];
+        this.allies = data.allies || [];
+        this.enemies = data.enemies || [];
+        this.assets = data.assets || { bases: [], artifacts: [] };
+        this.operations = data.operations || [];
+        this.achievements = data.achievements || [];
+        this.publicPerception = data.publicPerception || '';
+        this.campaign = data.campaign || { relevance: '', hooks: [] };
     }
 }
 

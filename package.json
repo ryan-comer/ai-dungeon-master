@@ -5,7 +5,8 @@
   "description": "An AI dungeon master that integrates with FoundryVTT",
   "main": "src/main.ts",
   "scripts": {
-    "start": "tsx ./src/main.ts"
+    "start": "tsx ./src/main.ts",
+    "compile": "tsc && tsc-alias"
   },
   "author": "Ryan Comer",
   "license": "ISC",
@@ -16,6 +17,7 @@
     "io-ts": "^2.2.22",
     "ollama": "^0.5.14",
     "openai": "^4.89.0",
+    "tsc-alias": "^1.8.12",
     "tsx": "^4.19.3"
   }
 }

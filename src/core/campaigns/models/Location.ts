@@ -57,7 +57,44 @@ class Location {
     }[];
 
     constructor(data: Partial<Location>) {
-        Object.assign(this, data);
+        this.name = data.name || '';
+        this.description = data.description || '';
+        this.locationType = data.locationType || '';
+        this.geography = data.geography || {
+            climate: '',
+            terrain: '',
+            features: [],
+        };
+        this.population = data.population || {
+            size: '',
+            demographics: [],
+        };
+        this.government = data.government || {
+            type: '',
+            ruler: '',
+            laws: [],
+        };
+        this.economy = data.economy || {
+            type: '',
+            resources: [],
+            currency: '',
+        };
+        this.defenses = data.defenses || {
+            military: '',
+            fortifications: [],
+        };
+        this.culture = data.culture || {
+            religion: '',
+            traditions: [],
+            festivals: [],
+        };
+        this.people = data.people || [];
+        this.campaign = data.campaign || {
+            relevance: '',
+            hooks: [],
+        };
+        this.history = data.history || [];
+        this.factions = data.factions || [];
     }
 }
 

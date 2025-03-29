@@ -62,6 +62,54 @@ class Character {
     };
     achievements: string[];
     dialogExamples: string[];
+
+    constructor() {
+        this.name = '';
+        this.campaignRole = '';
+        this.alignment = '';
+        this.factions = [];
+        this.job = '';
+        this.physicalDescription = {
+            age: '',
+            gender: '',
+            height: '',
+            build: '',
+            notableFeatures: [],
+            attire: '',
+        };
+        this.personality = {
+            general: '',
+            strengths: [],
+            flaws: [],
+            mannerisms: [],
+        };
+        this.background = {
+            origin: '',
+            significant_events: [],
+        };
+        this.goals = {
+            shortTerm: [],
+            long_term_goals: [],
+        };
+        this.fears = [];
+        this.relationships = {
+            allies: [],
+            enemies: [],
+        };
+        this.skills = {
+            magic: [],
+            combat: [],
+            languages_spoken: [],
+        };
+        this.equipment = [];
+        this.wealth = '';
+        this.campaign = {
+            relevance: '',
+            hooks: [],
+        };
+        this.achievements = [];
+        this.dialogExamples = [];
+    }
 }
 
 const CharacterCodec = t.type({

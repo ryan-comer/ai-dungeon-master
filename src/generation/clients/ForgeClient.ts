@@ -2,20 +2,30 @@ import { IImageGenerationClient } from "./interfaces/IImageGenerationClient";
 
 class TextToImageRequest {
     prompt: string;
-    steps?: number;
-    width?: number;
-    height?: number;
-    save_images?: boolean;
-    cfg_scale?: number;
-    sampler_name?: string;
-    scheduler?: string;
-    distilled_cfg_scale?: number;
+    steps?: number = 20;
+    width?: number = 1024;
+    height?: number = 1024;
+    save_images?: boolean = false;
+    cfg_scale?: number = 1.0;
+    sampler_name?: string = "Euler";
+    scheduler?: string = "Simple";
+    distilled_cfg_scale?: number = 3.5;
+
+    constructor(prompt: string) {
+        this.prompt = prompt;
+    }
 }
 
 class TextToImageResponse {
     images: string[];
     parameters: any;
     info: string;
+
+    constructor(images: string[], parameters: any, info: string) {
+        this.images = images;
+        this.parameters = parameters;
+        this.info = info;
+    }
 }
 
 // Uses the Stable Diffusion Forge API to generate images

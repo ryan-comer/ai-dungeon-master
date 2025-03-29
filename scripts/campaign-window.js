@@ -1,7 +1,13 @@
-console.log("Campaign Window Loaded")
+import { CoreManager } from "../dist/core/CoreManager.js";
+
 export class CampaignWindow extends Application {
+
+    coreManager = null;
+
     constructor(options = {}) {
         super(options);
+
+        this.coreManager = new CoreManager();
     }
 
     static get defaultOptions() {
@@ -27,6 +33,10 @@ export class CampaignWindow extends Application {
 
         const settingPrompt = document.getElementById('setting-prompt').value;
         console.log("Setting Prompt:", settingPrompt);
+
+        this.coreManager.createSetting(settingPrompt).then((settingName) => {
+            console.log("Setting created:", settingName);
+        })
     }
 
     _onCreateCampaign(event) {
