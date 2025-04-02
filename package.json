@@ -5,8 +5,9 @@
   "description": "An AI dungeon master that integrates with FoundryVTT",
   "main": "src/main.ts",
   "scripts": {
-    "start": "tsx ./src/main.ts",
-    "compile": "tsc && tsc-alias"
+    "start": "tsx ./src/index.ts",
+    "compile": "tsc && tsc-alias",
+    "build": "webpack --config webpack.config.js"
   },
   "author": "Ryan Comer",
   "license": "ISC",
@@ -17,7 +18,14 @@
     "io-ts": "^2.2.22",
     "ollama": "^0.5.14",
     "openai": "^4.89.0",
+    "path-browserify": "^1.0.1",
     "tsc-alias": "^1.8.12",
     "tsx": "^4.19.3"
+  },
+  "devDependencies": {
+    "@league-of-foundry-developers/foundry-vtt-types": "^12.331.3-beta",
+    "ts-loader": "^9.5.2",
+    "webpack": "^5.98.0",
+    "webpack-cli": "^6.0.1"
   }
 }

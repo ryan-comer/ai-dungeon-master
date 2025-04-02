@@ -1,8 +1,20 @@
 import { CoreManager } from "./core/CoreManager";
+import { GoogleClient } from "./generation/clients/GoogleClient";
+import { ForgeClient } from "./generation/clients/ForgeClient";
 import 'dotenv/config';
+import { ITextGenerationClient } from "./generation/clients/interfaces/ITextGenerationClient";
+import { IImageGenerationClient } from "./generation/clients/interfaces/IImageGenerationClient";
+import { IFileStore } from "./utils/interfaces/IFileStore";
+import { FileSystemStore } from "./utils/FileSystemStore";
+import { Setting } from "./core/campaigns/models/Setting";
+import { Campaign } from "./core/campaigns/models/Campaign";
 
 // Create a new instance of the core manager
-const coreManager = new CoreManager();
+const textGenerationClient: ITextGenerationClient = new GoogleClient(process.env.GOOGLE_API_KEY as string);
+const imageGenerationClient: IImageGenerationClient = new ForgeClient();
+const fileStore: IFileStore = new FileSystemStore();
+
+const coreManager = new CoreManager(textGenerationClient, imageGenerationClient, fileStore);
 
 // Initialize the core manager
 coreManager.initialize();
@@ -23,6 +35,15 @@ const campaignPrompt: string = "The players have to defeat the evil Plankton. Gi
 //const settingPrompt: string = "The world of Pokemon";
 //const campaignPrompt: string = "The players have to stop a unique threat to the world of Pokemon";
 
+coreManager.createSetting(settingPrompt).then(async (setting: Setting) => {
+    await coreManager.createCampaign(setting.name, campaignPrompt).then(async (campaign: Campaign) => {
+        for (let i = 0; i < campaign.milestones.length; i++) {
+            await coreManager.createStoryline(setting.name, campaign.name, i, campaign.milestones[i].description);
+        }
+    })
+});
+
+/*
 coreManager.createSetting(settingPrompt).then(async (settingName: string) => {
     await coreManager.createCampaign(settingName, campaignPrompt).then(async (campaignName: string) => {
         const campaign: string = await coreManager.getCampaign(settingName, campaignName);
@@ -33,3 +54,4 @@ coreManager.createSetting(settingPrompt).then(async (settingName: string) => {
         }
     })
 })
+*/

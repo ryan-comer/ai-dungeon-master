@@ -1,6 +1,6 @@
 interface ISemanticIndex {
-    getEntity(entityType: EntityType, context: string): Promise<string | null>;
-    addEntity(entityType: EntityType, name: string, context: string, jsonData: string): Promise<void>;
+    getEntity(entityType: EntityType, context: string): Promise<any | null>;
+    addEntity(entityType: EntityType, name: string, context: string, jsonData: string): Promise<any>;
 }
 
 // Enum for the different types of entities

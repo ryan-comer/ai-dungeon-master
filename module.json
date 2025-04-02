@@ -5,14 +5,20 @@
   "version": "0.1.0",
   "minimumCoreVersion": "0.8.6",
   "author": "Ryan Comer",
+  "packs": [
+    {
+      "name": "settings",
+      "label": "AI Dungeon Master",
+      "type": "JournalEntry",
+      "path": "packs/settings.db"
+    }
+  ],
   "styles": [
     "styles/main-window.css",
     "styles/campaign-window.css"
   ],
   "esmodules": [
-    "scripts/module.js",
-    "scripts/main-window.js",
-    "scripts/campaign-window.js"
+    "dist/module.js"
   ],
   "dependencies": []
 }

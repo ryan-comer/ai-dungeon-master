@@ -22,9 +22,7 @@ import { SemanticIndex } from "./SemanticIndex";
 import { RepeatJsonGeneration } from "../generation/clients/utils";
 
 import { IFileStore } from "../utils/interfaces/IFileStore";
-import { FileSystemStore } from "../utils/FileSystemStore";
 
-import * as fs from "fs";
 import path from "path";
 import { OllamaClient } from "../generation/clients/OllamaClient";
 import { OpenAIClient } from "../generation/clients/OpenAIClient";
@@ -40,15 +38,15 @@ class EntityManager implements IEntityManager {
     setting: Setting;
     campaign: Campaign;
 
-    constructor(setting: Setting, campaign: Campaign, textGenerationClient: ITextGenerationClient, imageGenerationClient: IImageGenerationClient) {
+    constructor(setting: Setting, campaign: Campaign, textGenerationClient: ITextGenerationClient, imageGenerationClient: IImageGenerationClient, fileStore: IFileStore) {
         this.textGenerationClient = textGenerationClient;
         this.imageGenerationClient = imageGenerationClient;
 
         this.setting = setting;
         this.campaign = campaign;
 
-        this.semanticIndex = new SemanticIndex(setting, campaign, textGenerationClient);
-        this.fileStore = new FileSystemStore();
+        this.semanticIndex = new SemanticIndex(setting, campaign, textGenerationClient, fileStore);
+        this.fileStore = fileStore;
     }
 
     private getContextPrompt(entity: Character|Faction|Location): string {
@@ -379,13 +377,7 @@ class EntityManager implements IEntityManager {
         const imageData: string = await this.imageGenerationClient.generateImage(portraitPrompt);
         //await this.imageGenerationClient.unloadModel();
 
-        const imagePath: string = path.join(
-            this.fileStore.getEntityBasePath(this.setting, this.campaign, EntityType.Character),
-            this.fileStore.stripInvalidFilenameChars(character.name),
-            "portrait.png"
-        )
-        this.fileStore.saveImage(imagePath, imageData);
-
+        await this.fileStore.saveCharacterImage(this.setting.name, this.campaign.name, character.name, "portrait.png", imageData);
         return character;
     }
 
@@ -439,12 +431,7 @@ class EntityManager implements IEntityManager {
         const imageData: string = await this.imageGenerationClient.generateImage(imagePrompt);
         //await this.imageGenerationClient.unloadModel();
 
-        const imagePath: string = path.join(
-            this.fileStore.getEntityBasePath(this.setting, this.campaign, EntityType.Location),
-            this.fileStore.stripInvalidFilenameChars(location.name),
-            "background.png"
-        )
-        this.fileStore.saveImage(imagePath, imageData);
+        await this.fileStore.saveLocationImage(this.setting.name, this.campaign.name, location.name, "background.png", imageData);
 
         return location;
     }
@@ -497,41 +484,36 @@ class EntityManager implements IEntityManager {
         const imageData: string = await this.imageGenerationClient.generateImage(imagePrompt);
         //await this.imageGenerationClient.unloadModel();
 
-        const imagePath: string = path.join(
-            this.fileStore.getEntityBasePath(this.setting, this.campaign, EntityType.Faction),
-            this.fileStore.stripInvalidFilenameChars(faction.name),
-            "symbol.png"
-        )
-        this.fileStore.saveImage(imagePath, imageData);
+        await this.fileStore.saveFactionImage(this.setting.name, this.campaign.name, faction.name, "emblem.png", imageData);
 
         return faction;
     }
 
     async getCharacter(context: string): Promise<Character | null> {
-        const character: string | null = await this.semanticIndex.getEntity(EntityType.Character, context);
+        const character:  Character | null = await this.semanticIndex.getEntity(EntityType.Character, context);
 
         if (character == null) {
             return null;
         } else {
-            return JSON.parse(character);
+            return character
         }
     }
     async getLocation(context: string): Promise<Location | null> {
-        const location: string | null = await this.semanticIndex.getEntity(EntityType.Location, context);
+        const location: Location | null = await this.semanticIndex.getEntity(EntityType.Location, context);
 
         if (location == null) {
             return null;
         } else {
-            return JSON.parse(location);
+            return location;
         }
     }
     async getFaction(context: string): Promise<Faction | null> {
-        const faction: string | null = await this.semanticIndex.getEntity(EntityType.Faction, context);
+        const faction: Faction | null = await this.semanticIndex.getEntity(EntityType.Faction, context);
 
         if (faction == null) {
             return null;
         } else {
-            return JSON.parse(faction);
+            return faction;
         }
     }
 }

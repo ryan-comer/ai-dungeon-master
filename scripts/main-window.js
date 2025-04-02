@@ -1,7 +1,9 @@
-import { CampaignWindow } from './campaign-window.js';
+import {
+    CampaignWindow
+} from './campaign-window.js';
 
-// Wait for the DOM to be fully loaded
-Hooks.on('ready', () => {
+export function initializeMainWindow() {
+    // Wait for the DOM to be fully loaded
     const chatControls = document.getElementById('chat-controls');
     if (chatControls) {
         const templatePath = 'modules/ai-dungeon-master/templates/main-window.html';
@@ -37,4 +39,4 @@ Hooks.on('ready', () => {
     } else {
         console.error("Chat log element not found.");
     }
-});
+}

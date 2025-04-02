@@ -1,5 +1,3 @@
-import * as fs from 'fs';
-
 // Repeat text generation until valid JSON is returned
 async function RepeatJsonGeneration(prompt: string, 
     generationFunction: (input: string) => Promise<string>, 
@@ -15,7 +13,10 @@ async function RepeatJsonGeneration(prompt: string,
         responseJson = TryParseJson(response, true)
 
         if (responseJson != null && regenerateCheckFunction(responseJson)) {
+            console.log("Regenerate check function passed")
             return responseJson
+        }else {
+            console.log("Regenerate check function failed")
         }
 
         console.log("Failed to generate valid JSON, retrying...")
@@ -47,7 +48,6 @@ function TryParseJson(buffer: string, returnString: boolean=false): any {
 
 function SaveImage(base64Data: string, filename: string): void {
     const buffer = Buffer.from(base64Data, 'base64');
-    fs.writeFileSync(filename, buffer);
 }
 
 export { TryParseJson, RepeatJsonGeneration, SaveImage}

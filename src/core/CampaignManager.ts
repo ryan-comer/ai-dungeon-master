@@ -4,7 +4,6 @@ import { IEntityManager } from "./interfaces/IEntitymanager";
 import { EntityManager } from "./EntityManager";
 
 import { IFileStore } from "../utils/interfaces/IFileStore";
-import { FileSystemStore } from "../utils/FileSystemStore";
 
 import { ITextGenerationClient } from "../generation/clients/interfaces/ITextGenerationClient";
 import { OllamaClient } from "../generation/clients/OllamaClient";
@@ -33,17 +32,13 @@ class CampaignManager implements ICampaignManager {
     private textGenerationClient: ITextGenerationClient;
     private imageGenerationClient: IImageGenerationClient;
 
-    constructor() {
-        this.fileStore = new FileSystemStore();
-
-        //this.textGenerationClient = new OllamaClient();
-        //this.textGenerationClient = new OpenAIClient(process.env.OPENAI_API_KEY || "", "gpt-4o");
-        this.textGenerationClient = new GoogleClient(process.env.GOOGLE_API_KEY || "");
-
-        this.imageGenerationClient = new ForgeClient();
+    constructor(textGenerationClient: ITextGenerationClient, imageGenerationClient: IImageGenerationClient, iFileStore: IFileStore) {
+        this.textGenerationClient = textGenerationClient;
+        this.imageGenerationClient = imageGenerationClient;
+        this.fileStore = iFileStore;
     }
 
-    async createSetting(userPrompt: string): Promise<string> {
+    async createSetting(userPrompt: string): Promise<Setting> {
         const prompt: string = `
             Create a setting for a campaign in dnd. This will be a high-level description of the world, its inhabitants, places, and the general state of things.
             This setting will be used to generate storylines for players to play through.
@@ -144,13 +139,18 @@ class CampaignManager implements ICampaignManager {
         });
         const settingJson: Setting = JSON.parse(setting);
 
-        this.fileStore.saveFile(this.fileStore.getSettingPath(settingJson.name), setting);
+        await this.fileStore.saveSetting(settingJson.name, settingJson);
 
-        return settingJson.name;    
+        return settingJson;
     }
 
-    async createCampaign(settingName: string, userPrompt: string): Promise<string> {
-        const setting: string = this.fileStore.loadFile(this.fileStore.getSettingPath(settingName));
+    async createCampaign(settingName: string, userPrompt: string): Promise<Campaign> {
+        const settingJson: Setting | null = await this.fileStore.getSetting(settingName);
+        if (settingJson == null) {
+            throw new Error(`Setting ${settingName} not found`);
+        }
+        const setting: string = JSON.stringify(settingJson, null, 2);
+
         const prompt: string = `
             Create a campaign using the following setting:
 
@@ -226,19 +226,27 @@ class CampaignManager implements ICampaignManager {
 
         let campaignJson: Campaign = JSON.parse(campaign);
 
-        this.fileStore.saveFile(this.fileStore.getCampaignPath(settingName, campaignJson.name), campaign);
+        this.fileStore.saveCampaign(settingName, campaignJson.name, campaignJson);
 
         // Initialize the entities for the campaign
         await this.initializeCharacters(JSON.parse(setting), JSON.parse(campaign), null);
         await this.initializeFactions(JSON.parse(setting), JSON.parse(campaign), null);
         await this.initializeLocations(JSON.parse(setting), JSON.parse(campaign), null);
 
-        return campaignJson.name;
+        return campaignJson;
     }
 
-    async createStoryline(settingName: string, campaignName: string, milestoneIndex: number, userPrompt: string): Promise<string> {
-        const setting: string = this.fileStore.loadFile(this.fileStore.getSettingPath(settingName));
-        const campaign: string = this.fileStore.loadFile(this.fileStore.getCampaignPath(settingName, campaignName));
+    async createStoryline(settingName: string, campaignName: string, milestoneIndex: number, userPrompt: string): Promise<Storyline> {
+        const settingJson: Setting | null = await this.fileStore.getSetting(settingName);
+        if (settingJson == null) {
+            throw new Error(`Setting ${settingName} not found`);
+        }
+        const setting: string = JSON.stringify(settingJson, null, 2);
+        const campaignJson: Campaign | null = await this.fileStore.getCampaign(settingName, campaignName);
+        if (campaignJson == null) {
+            throw new Error(`Campaign ${campaignName} not found`);
+        }
+        const campaign: string = JSON.stringify(campaignJson, null, 2);
         const milestone = JSON.parse(campaign).milestones[milestoneIndex];
 
         const prompt = `
@@ -325,29 +333,29 @@ class CampaignManager implements ICampaignManager {
 
         const storylineJson: Storyline = JSON.parse(storyline);
 
-        this.fileStore.saveFile(this.fileStore.getStorylinePath(settingName, campaignName, `${milestoneIndex}_${storylineJson.name}`), storyline);
+        await this.fileStore.saveStoryline(settingName, campaignName, storylineJson);
 
         // Initialize the entities for the storyline
         await this.initializeCharacters(JSON.parse(setting), JSON.parse(campaign), storylineJson);
         await this.initializeFactions(JSON.parse(setting), JSON.parse(campaign), storylineJson);
         await this.initializeLocations(JSON.parse(setting), JSON.parse(campaign), storylineJson);
 
-        return storylineJson.name;
+        return storylineJson;
     }
 
-    async getSetting(settingName: string): Promise<string> {
-        return this.fileStore.loadFile(this.fileStore.getSettingPath(settingName));
+    async getSetting(settingName: string): Promise<Setting | null> {
+        return this.fileStore.getSetting(settingName);
     }
-    async getCampaign(settingName: string, campaignName: string): Promise<string> {
-        return this.fileStore.loadFile(this.fileStore.getCampaignPath(settingName, campaignName));
+    async getCampaign(settingName: string, campaignName: string): Promise<Campaign | null> {
+        return this.fileStore.getCampaign(settingName, campaignName);
     }
-    async getStoryline(settingName: string, campaignName: string, storylineName: string): Promise<string> {
-        return this.fileStore.loadFile(this.fileStore.getStorylinePath(settingName, campaignName, storylineName));
+    async getStoryline(settingName: string, campaignName: string, storylineName: string): Promise<Storyline | null> {
+        return this.fileStore.getStoryline(settingName, campaignName, storylineName);
     }
 
     // Initialize the characters for the campaign
     private async initializeCharacters(setting: Setting, campaign: Campaign, storyline: Storyline|null): Promise<void> {
-        const entityManager: IEntityManager = new EntityManager(setting, campaign, this.textGenerationClient, this.imageGenerationClient);
+        const entityManager: IEntityManager = new EntityManager(setting, campaign, this.textGenerationClient, this.imageGenerationClient, this.fileStore);
 
         // Initialize the setting characters
         for (const character of setting.notableFigures) {
@@ -378,7 +386,7 @@ class CampaignManager implements ICampaignManager {
 
     // Initialize the factions for the campaign
     private async initializeFactions(setting: Setting, campaign: Campaign, storyline: Storyline|null): Promise<void> {
-        const entityManager: IEntityManager = new EntityManager(setting, campaign, this.textGenerationClient, this.imageGenerationClient);
+        const entityManager: IEntityManager = new EntityManager(setting, campaign, this.textGenerationClient, this.imageGenerationClient, this.fileStore);
 
         // Initialize the setting factions
         for (const faction of setting.factions) {
@@ -407,7 +415,7 @@ class CampaignManager implements ICampaignManager {
 
     // Initialize the locations for the campaign
     private async initializeLocations(setting: Setting, campaign: Campaign, storyline: Storyline|null): Promise<void> {
-        const entityManager: IEntityManager = new EntityManager(setting, campaign, this.textGenerationClient, this.imageGenerationClient);
+        const entityManager: IEntityManager = new EntityManager(setting, campaign, this.textGenerationClient, this.imageGenerationClient, this.fileStore);
 
         // Initialize the setting locations
         for (const location of setting.geography) {
