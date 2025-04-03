@@ -226,7 +226,7 @@ class CampaignManager implements ICampaignManager {
 
         let campaignJson: Campaign = JSON.parse(campaign);
 
-        this.fileStore.saveCampaign(settingName, campaignJson.name, campaignJson);
+        await this.fileStore.saveCampaign(settingName, campaignJson.name, campaignJson);
 
         // Initialize the entities for the campaign
         await this.initializeCharacters(JSON.parse(setting), JSON.parse(campaign), null);

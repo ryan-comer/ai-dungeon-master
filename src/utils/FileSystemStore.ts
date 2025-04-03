@@ -13,8 +13,14 @@ import { stripInvalidFilenameChars } from "./utils";
 
 class FileSystemStore implements IFileStore {
 
+    private basePath: string;
+
+    constructor(basePath: string=__dirname) {
+        this.basePath = basePath;
+    }
+
     async getSettings(): Promise<Setting[]> {
-        const settingsDir = path.join(__dirname, "./settings");
+        const settingsDir = path.join(this.basePath, "./settings");
         if (!fs.existsSync(settingsDir)) {
             return [];
         }
@@ -35,7 +41,7 @@ class FileSystemStore implements IFileStore {
     }
 
     async getCampaigns(settingName: string): Promise<Campaign[]> {
-        const campaignsDir = path.join(__dirname, "./settings", stripInvalidFilenameChars(settingName));
+        const campaignsDir = path.join(this.basePath, "./settings", stripInvalidFilenameChars(settingName));
         if (!fs.existsSync(campaignsDir)) {
             return [];
         }
@@ -218,25 +224,25 @@ class FileSystemStore implements IFileStore {
 
     // Helper functions to get paths
     getSettingPath(settingName: string): string {
-        return `./settings/${stripInvalidFilenameChars(settingName)}/setting.json`;
+        return `${this.basePath}/settings/${stripInvalidFilenameChars(settingName)}/setting.json`;
     }
     getCampaignPath(settingName: string, campaignName: string): string {
-        return `./settings/${stripInvalidFilenameChars(settingName)}/${stripInvalidFilenameChars(campaignName)}/campaign.json`;
+        return `${this.basePath}/settings/${stripInvalidFilenameChars(settingName)}/${stripInvalidFilenameChars(campaignName)}/campaign.json`;
     }
     getStorylinePath(settingName: string, campaignName: string, storylineName: string): string {
-        return `./settings/${stripInvalidFilenameChars(settingName)}/${stripInvalidFilenameChars(campaignName)}/storylines/${stripInvalidFilenameChars(storylineName)}.json`;
+        return `${this.basePath}/settings/${stripInvalidFilenameChars(settingName)}/${stripInvalidFilenameChars(campaignName)}/storylines/${stripInvalidFilenameChars(storylineName)}.json`;
     }
     getCharactersPath(settingName: string, campaignName: string): string {
-        return `./settings/${stripInvalidFilenameChars(settingName)}/${stripInvalidFilenameChars(campaignName)}/characters`;
+        return `${this.basePath}/settings/${stripInvalidFilenameChars(settingName)}/${stripInvalidFilenameChars(campaignName)}/characters`;
     }
     getLocationsPath(settingName: string, campaignName: string): string {
-        return `./settings/${stripInvalidFilenameChars(settingName)}/${stripInvalidFilenameChars(campaignName)}/locations`;
+        return `${this.basePath}/settings/${stripInvalidFilenameChars(settingName)}/${stripInvalidFilenameChars(campaignName)}/locations`;
     }
     getFactionsPath(settingName: string, campaignName: string): string {
-        return `./settings/${stripInvalidFilenameChars(settingName)}/${stripInvalidFilenameChars(campaignName)}/factions`;
+        return `${this.basePath}/settings/${stripInvalidFilenameChars(settingName)}/${stripInvalidFilenameChars(campaignName)}/factions`;
     }
     getItemsPath(settingName: string, campaignName: string): string {
-        return `./settings/${stripInvalidFilenameChars(settingName)}/${stripInvalidFilenameChars(campaignName)}/items`;
+        return `${this.basePath}/settings/${stripInvalidFilenameChars(settingName)}/${stripInvalidFilenameChars(campaignName)}/items`;
     }
 
     // Get the base path for the entity type

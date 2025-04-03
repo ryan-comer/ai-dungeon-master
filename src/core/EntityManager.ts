@@ -491,30 +491,15 @@ class EntityManager implements IEntityManager {
 
     async getCharacter(context: string): Promise<Character | null> {
         const character:  Character | null = await this.semanticIndex.getEntity(EntityType.Character, context);
-
-        if (character == null) {
-            return null;
-        } else {
-            return character
-        }
+        return character;
     }
     async getLocation(context: string): Promise<Location | null> {
         const location: Location | null = await this.semanticIndex.getEntity(EntityType.Location, context);
-
-        if (location == null) {
-            return null;
-        } else {
-            return location;
-        }
+        return location;
     }
     async getFaction(context: string): Promise<Faction | null> {
         const faction: Faction | null = await this.semanticIndex.getEntity(EntityType.Faction, context);
-
-        if (faction == null) {
-            return null;
-        } else {
-            return faction;
-        }
+        return faction;
     }
 }
 

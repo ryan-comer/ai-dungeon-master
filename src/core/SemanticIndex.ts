@@ -29,7 +29,15 @@ class SemanticIndex implements ISemanticIndex {
     // Look for an entity based on the prompt
     async getEntity(entityType: EntityType, prompt: string): Promise<any | null> {
         // Load the semantic index
-        const semanticIndex: any = await this.fileStore.getSemanticIndex(this.setting, this.campaign, entityType);
+        let semanticIndex: any = await this.fileStore.getSemanticIndex(this.setting, this.campaign, entityType);
+
+        // If the index doesn't exist, create it
+        if (!semanticIndex) {
+            await this.fileStore.saveSemanticIndex(this.setting, this.campaign, entityType, {
+                "index": []
+            });
+        }
+        semanticIndex = await this.fileStore.getSemanticIndex(this.setting, this.campaign, entityType);
 
         const indexPrompt: string = `
         I am going to give you JSON that represents an entity, as well as a list of other JSON entities.
@@ -120,7 +128,7 @@ class SemanticIndex implements ISemanticIndex {
 
         // If the index doesn't exist, create it
         if (!semanticIndex) {
-            this.fileStore.saveSemanticIndex(this.setting, this.campaign, entityType, {
+            await this.fileStore.saveSemanticIndex(this.setting, this.campaign, entityType, {
                 "index": []
             });
         }
