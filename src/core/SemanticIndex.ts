@@ -39,6 +39,8 @@ class SemanticIndex implements ISemanticIndex {
         }
         semanticIndex = await this.fileStore.getSemanticIndex(this.setting, this.campaign, entityType);
 
+        console.log(`Semantic index: ${JSON.stringify(semanticIndex)}`);
+
         const indexPrompt: string = `
         I am going to give you JSON that represents an entity, as well as a list of other JSON entities.
         I want you to find the entity that matches the first entity based on the JSON

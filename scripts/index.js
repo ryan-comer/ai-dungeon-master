@@ -25,7 +25,6 @@ function initializeSettings() {
 }
 
 Hooks.on('ready', () => {
-    console.log("Initializing module...");
     initializeSettings();
     initializeModule();
 });

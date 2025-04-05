@@ -30,7 +30,6 @@ export function initializeMainWindow() {
                 });
 
                 document.getElementById('ai-dm-settings-button').addEventListener('click', () => {
-                    console.log('Settings button clicked!');
                     const campaignWindow = new CampaignWindow();
                     campaignWindow.render(true);
                 });

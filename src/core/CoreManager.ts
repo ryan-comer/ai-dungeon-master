@@ -6,16 +6,24 @@ import { ITextGenerationClient } from "../generation/clients/interfaces/ITextGen
 import { IImageGenerationClient } from "../generation/clients/interfaces/IImageGenerationClient";
 
 import { IFileStore } from "../utils/interfaces/IFileStore";
+import { ILogger } from "../utils/interfaces/ILogger";
+import { Logger } from "../utils/Logger";
 
 import { Setting } from "./campaigns/models/Setting";
 import { Campaign } from "./campaigns/models/Campaign";
 import { Storyline } from "./campaigns/models/Storyline";
 
+import { Mutex } from "async-mutex"; // Add this import for the lock mechanism
+
 class CoreManager implements ICoreManager {
     private campaignManager: ICampaignManager;
+    private logger: ILogger;
+    private creationLock: Mutex; // Add a Mutex instance
 
-    constructor(iTextGenerationClient: ITextGenerationClient, iImageGenerationClient: IImageGenerationClient, fileStore: IFileStore) {
-        this.campaignManager = new CampaignManager(iTextGenerationClient, iImageGenerationClient, fileStore);
+    constructor(iTextGenerationClient: ITextGenerationClient, iImageGenerationClient: IImageGenerationClient, fileStore: IFileStore, logger: ILogger=new Logger()) {
+        this.campaignManager = new CampaignManager(iTextGenerationClient, iImageGenerationClient, fileStore, logger);
+        this.logger = logger;
+        this.creationLock = new Mutex(); // Initialize the Mutex
     }
 
     initialize(): void {
@@ -23,19 +31,27 @@ class CoreManager implements ICoreManager {
     }
 
     async createSetting(userPrompt: string = ""): Promise<Setting> {
-        console.log("Creating a setting...");
-        const setting: Setting = await this.campaignManager.createSetting(userPrompt);
-        return setting;
+        return this.creationLock.runExclusive(async () => { // Use the lock
+            this.logger.info("Creating a setting...");
+            const setting: Setting = await this.campaignManager.createSetting(userPrompt);
+            return setting;
+        });
     }
+
     async createCampaign(settingName: string, userPrompt: string = ""): Promise<Campaign> {
-        console.log("Creating a campaign...");
-        const campaign: Campaign = await this.campaignManager.createCampaign(settingName, userPrompt);
-        return campaign
+        return this.creationLock.runExclusive(async () => { // Use the lock
+            this.logger.info("Creating a campaign...");
+            const campaign: Campaign = await this.campaignManager.createCampaign(settingName, userPrompt);
+            return campaign
+        });
     }
+
     async createStoryline(settingName: string, campaignName: string, milestoneIndex: number, userPrompt: string = ""): Promise<Storyline> {
-        console.log("Creating a storyline...");
-        const storyline: Storyline = await this.campaignManager.createStoryline(settingName, campaignName, milestoneIndex, userPrompt);
-        return storyline;
+        return this.creationLock.runExclusive(async () => { // Use the lock
+            this.logger.info("Creating a storyline...");
+            const storyline: Storyline = await this.campaignManager.createStoryline(settingName, campaignName, milestoneIndex, userPrompt);
+            return storyline;
+        });
     }
 
     async getSetting(settingName: string): Promise<Setting | null> {

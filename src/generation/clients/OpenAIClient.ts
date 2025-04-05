@@ -34,8 +34,6 @@ class OpenAIClient implements ITextGenerationClient {
             throw new Error("Failed to generate text");
         }
 
-        console.log(JSON.stringify(response, null, '\t'));
-
         let text = response.choices[0].message.content;
 
         return text

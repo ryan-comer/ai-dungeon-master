@@ -35,3 +35,24 @@ label {
     width: 100%;
     font-size: 14px;
 }
+
+#loading-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: 20px;
+    gap: 10px;
+}
+
+#loading-icon {
+    font-size: 1.5rem;
+}
+
+#loading-icon.hidden {
+    display: none;
+}
+
+#status-text {
+    font-size: 1rem;
+    color: #555;
+}

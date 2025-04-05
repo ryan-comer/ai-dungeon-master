@@ -16,14 +16,10 @@ class FoundryStore implements IFileStore {
     }
 
     async getSettings(): Promise<Setting[]> {
-        const settingsDirectories: Folder[] = await this.getDirectories("settings")
-
-        console.log("Settings directories: ")
-        console.dir(settingsDirectories)
+        const settingsDirectories: string[] = await this.getDirectories(`${this.getBasePath()}/settings`);
 
         const settings: Setting[] = [];
-        for (const directory of settingsDirectories) {
-            const settingName = directory.name;
+        for (const settingName of settingsDirectories) {
             const setting = await this.getSetting(settingName);
             if (setting) {
                 settings.push(setting);
@@ -35,11 +31,10 @@ class FoundryStore implements IFileStore {
 
     async getCampaigns(settingName: string): Promise<Campaign[]> {
         settingName = this.stripInvalidFilenameChars(settingName);
+        const campaignDirectories: string[] = await this.getDirectories(`${this.getBasePath()}/settings/${settingName}`);
 
-        const campaignDirectories: Folder[] = await this.getDirectories(`settings/${settingName}`)
         const campaigns: Campaign[] = [];
-        for (const directory of campaignDirectories) {
-            const campaignName = directory.name;
+        for (const campaignName of campaignDirectories) {
             const campaign = await this.getCampaign(settingName, campaignName);
             if (campaign) {
                 campaigns.push(campaign);
@@ -80,7 +75,7 @@ class FoundryStore implements IFileStore {
         campaignName = this.stripInvalidFilenameChars(campaignName);
         characterName = this.stripInvalidFilenameChars(characterName);
 
-        const filePath = `${this.getCharactersPath(settingName, campaignName)}/${characterName}`;
+        const filePath = `${this.getCharactersPath(settingName, campaignName)}/${characterName}/entity.json`;
         const content = await this.loadFile(filePath);
         return content ? JSON.parse(content) as Character : null;
     }
@@ -90,7 +85,7 @@ class FoundryStore implements IFileStore {
         campaignName = this.stripInvalidFilenameChars(campaignName);
         locationName = this.stripInvalidFilenameChars(locationName);
 
-        const filePath = `${this.getLocationsPath(settingName, campaignName)}/${locationName}`;
+        const filePath = `${this.getLocationsPath(settingName, campaignName)}/${locationName}/entity.json`;
         const content = await this.loadFile(filePath);
         return content ? JSON.parse(content) as Location : null;
     }
@@ -100,7 +95,7 @@ class FoundryStore implements IFileStore {
         campaignName = this.stripInvalidFilenameChars(campaignName);
         factionName = this.stripInvalidFilenameChars(factionName);
 
-        const filePath = `${this.getFactionsPath(settingName, campaignName)}/${factionName}`;
+        const filePath = `${this.getFactionsPath(settingName, campaignName)}/${factionName}/entity.json`;
         const content = await this.loadFile(filePath);
         return content ? JSON.parse(content) as Faction : null;
     }
@@ -110,12 +105,7 @@ class FoundryStore implements IFileStore {
 
         // Save the setting to a file
         const filePath: string = `${this.getSettingPath(settingName)}/setting.json`;
-        try{
-            await this.unlockCompendium();
-            await this.saveText(filePath, JSON.stringify(setting, null, 2));
-        } finally {
-            await this.lockCompendium();
-        }
+        await this.saveFile(filePath, JSON.stringify(setting, null, 2));
     }
 
     async saveCampaign(settingName: string, campaignName: string, campaign: Campaign): Promise<void> {
@@ -123,12 +113,7 @@ class FoundryStore implements IFileStore {
         campaignName = this.stripInvalidFilenameChars(campaignName);
 
         const filePath = this.getCampaignPath(settingName, campaignName) + "/campaign.json";
-        try {
-            await this.unlockCompendium();
-            await this.saveText(filePath, JSON.stringify(campaign, null, 2));
-        } finally {
-            await this.lockCompendium();
-        }
+        await this.saveFile(filePath, JSON.stringify(campaign, null, 2));
     }
 
     async saveStoryline(settingName: string, campaignName: string, storyline: Storyline): Promise<void> {
@@ -136,51 +121,34 @@ class FoundryStore implements IFileStore {
         campaignName = this.stripInvalidFilenameChars(campaignName);
 
         const filePath = this.getStorylinePath(settingName, campaignName, storyline.name);
-        try{
-            await this.unlockCompendium();
-            await this.saveText(filePath, JSON.stringify(storyline, null, 2));
-        } finally {
-            await this.lockCompendium();
-        }
+        await this.saveFile(filePath, JSON.stringify(storyline, null, 2));
     }
 
     async saveCharacter(settingName: string, campaignName: string, character: Character): Promise<void> {
         settingName = this.stripInvalidFilenameChars(settingName);
         campaignName = this.stripInvalidFilenameChars(campaignName);
+        const characterName: string = this.stripInvalidFilenameChars(character.name);
 
-        const filePath = `${this.getCharactersPath(settingName, campaignName)}/${character.name}`;
-        try {
-            await this.unlockCompendium();
-            await this.saveText(filePath, JSON.stringify(character, null, 2));
-        } finally {
-            await this.lockCompendium();
-        }
+        const filePath = `${this.getCharactersPath(settingName, campaignName)}/${characterName}/entity.json`;
+        await this.saveFile(filePath, JSON.stringify(character, null, 2));
     }
 
     async saveLocation(settingName: string, campaignName: string, location: Location): Promise<void> {
         settingName = this.stripInvalidFilenameChars(settingName);
         campaignName = this.stripInvalidFilenameChars(campaignName);
+        const locationName: string = this.stripInvalidFilenameChars(location.name);
 
-        const filePath = `${this.getLocationsPath(settingName, campaignName)}/${location.name}`;
-        try {
-            await this.unlockCompendium();
-            await this.saveText(filePath, JSON.stringify(location, null, 2));
-        } finally {
-            await this.lockCompendium();
-        }
+        const filePath = `${this.getLocationsPath(settingName, campaignName)}/${locationName}/entity.json`;
+        await this.saveFile(filePath, JSON.stringify(location, null, 2));
     }
 
     async saveFaction(settingName: string, campaignName: string, faction: Faction): Promise<void> {
         settingName = this.stripInvalidFilenameChars(settingName);
         campaignName = this.stripInvalidFilenameChars(campaignName);
+        const factionName: string = this.stripInvalidFilenameChars(faction.name);
 
-        const filePath = `${this.getFactionsPath(settingName, campaignName)}/${faction.name}`;
-        try {
-            await this.unlockCompendium();
-            await this.saveText(filePath, JSON.stringify(faction, null, 2));
-        } finally {
-            await this.lockCompendium();
-        }
+        const filePath = `${this.getFactionsPath(settingName, campaignName)}/${factionName}/entity.json`;
+        await this.saveFile(filePath, JSON.stringify(faction, null, 2));
     }
 
     async saveCharacterImage(settingName: string, campaignName: string, characterName: string, fileName: string, base64Image: string): Promise<void> {
@@ -189,13 +157,7 @@ class FoundryStore implements IFileStore {
         characterName = this.stripInvalidFilenameChars(characterName);
 
         const filePath = `${this.getCharactersPath(settingName, campaignName)}/${characterName}/${fileName}`;
-
-        try {
-            await this.unlockCompendium();
-            await this.saveImage(filePath, base64Image);
-        } finally {
-            await this.lockCompendium();
-        }
+        await this.saveImage(filePath, base64Image);
     }
 
     async saveLocationImage(settingName: string, campaignName: string, locationName: string, fileName: string, base64Image: string): Promise<void> {
@@ -204,13 +166,7 @@ class FoundryStore implements IFileStore {
         locationName = this.stripInvalidFilenameChars(locationName);
 
         const filePath = `${this.getLocationsPath(settingName, campaignName)}/${locationName}/${fileName}`;
-
-        try {
-            await this.unlockCompendium();
-            await this.saveImage(filePath, base64Image);
-        } finally {
-            await this.lockCompendium();
-        }
+        await this.saveImage(filePath, base64Image);
     }
 
     async saveFactionImage(settingName: string, campaignName: string, factionName: string, fileName: string, base64Image: string): Promise<void> {
@@ -219,30 +175,22 @@ class FoundryStore implements IFileStore {
         factionName = this.stripInvalidFilenameChars(factionName);
 
         const filePath = `${this.getFactionsPath(settingName, campaignName)}/${factionName}/${fileName}`;
-
-        try {
-            await this.unlockCompendium();
-            await this.saveImage(filePath, base64Image);
-        } finally {
-            await this.lockCompendium();
-        }
+        await this.saveImage(filePath, base64Image);
     }
 
     async getEntity(setting: Setting, campaign: Campaign, entityType: EntityType, prompt: string): Promise<any | null> {
-        const filePath = `${this.getEntityBasePath(setting, campaign, entityType)}/${prompt}`;
+        const basePath: string = this.getEntityBasePath(setting, campaign, entityType);
+        const entityFileName: string = this.stripInvalidFilenameChars(prompt);
+        const filePath: string = `${basePath}/${entityFileName}/entity.json`;
         const content = await this.loadFile(filePath);
         return content ? JSON.parse(content) : null;
     }
 
     async saveEntity(setting: Setting, campaign: Campaign, entityType: EntityType, prompt: string, entity: any): Promise<void> {
-        const filePath = `${this.getEntityBasePath(setting, campaign, entityType)}/${prompt}`;
-
-        try {
-            await this.unlockCompendium();
-            await this.saveText(filePath, JSON.stringify(entity, null, 2));
-        } finally {
-            await this.lockCompendium();
-        }
+        const basePath: string = this.getEntityBasePath(setting, campaign, entityType);
+        const entityFileName: string = this.stripInvalidFilenameChars(prompt);
+        const filePath: string = `${basePath}/${entityFileName}/entity.json`;
+        await this.saveFile(filePath, JSON.stringify(entity, null, 2));
     }
 
     async getSemanticIndex(setting: Setting, campaign: Campaign, entityType: EntityType): Promise<any | null> {
@@ -253,12 +201,41 @@ class FoundryStore implements IFileStore {
 
     async saveSemanticIndex(setting: Setting, campaign: Campaign, entityType: EntityType, index: any): Promise<void> {
         const filePath = `${this.getEntityBasePath(setting, campaign, entityType)}/semantic_index.json`;
+        await this.saveFile(filePath, JSON.stringify(index, null, 2));
+    }
 
-        try {
-            await this.unlockCompendium();
-            await this.saveText(filePath, JSON.stringify(index, null, 2));
-        } finally {
-            await this.lockCompendium();
+    async saveFile(filePath: string, fileContent: string): Promise<void> {
+        // Get the folder path from the file path
+        const folderPath = filePath.substring(0, filePath.lastIndexOf('/'));
+        const folderPaths = folderPath.split('/');
+        const fileName = filePath.substring(filePath.lastIndexOf('/') + 1);
+        console.log("Saving file: ", filePath)
+
+        // Create the directory structure if it doesn't exist
+        let currentPath: any = '';
+        for (const part of folderPaths) {
+            currentPath += `${part}/`;
+            try {
+            // Check if the directory exists by attempting to browse it
+                await FilePicker.browse('data', currentPath);
+            } catch (error) {
+                // If browsing fails, the directory doesn't exist; attempt to create it
+                try {
+                    await FilePicker.createDirectory('data', currentPath);
+                    console.log(`Directory created: ${currentPath}`);
+                } catch (createError) {
+                    console.error(`Failed to create directory: ${currentPath}`, createError);
+                    throw createError; // Stop the process if directory creation fails
+                }
+            }
+        }
+
+        // Use the FilePicker to write the file
+        const result: any = await FilePicker.upload('data', folderPath, new File([fileContent], fileName), {});
+        if (result.status === 'success') {
+            console.log("File written successfully:", result.path);
+        } else {
+            console.error("Error writing file:", result.error);
         }
     }
 
@@ -332,12 +309,40 @@ class FoundryStore implements IFileStore {
         }
     }
 
+    base64ToBlob(base64: string, type: string): Blob {
+        const byteCharacters = atob(base64);
+        const byteNumbers = new Array(byteCharacters.length);
+        for (let i = 0; i < byteCharacters.length; i++) {
+            byteNumbers[i] = byteCharacters.charCodeAt(i);
+        }
+        const byteArray = new Uint8Array(byteNumbers);
+        return new Blob([byteArray], { type });
+    }
+
     async saveImage(filePath: string, base64Image: string): Promise<void> {
-        return this.saveText(filePath, base64Image);
+        console.log("Saving image: ", filePath);
+
+        const blob = this.base64ToBlob(base64Image, 'image/png');
+        const fileName = filePath.substring(filePath.lastIndexOf('/') + 1);
+        const file = new File([blob], fileName, { type: 'image/png' });
+
+        await FilePicker.upload('data', filePath.substring(0, filePath.lastIndexOf('/')), file, {});
     }
 
     // Load a file from the compendium pack
     async loadFile(filePath: string): Promise<string | null> {
+        console.log("Loading file: ", filePath)
+
+        const response: any = await fetch(filePath)
+        if (!response.ok) {
+            console.error(`Failed to load file: ${response.status} ${response.statusText}`);
+            return null;
+        } else {
+            console.log("File loaded successfully: ", filePath)
+            return response.text();
+        }
+
+        /*
         console.log("Loading file: ", filePath)
 
         const pack = game.packs?.get(this.compendiumName);
@@ -396,10 +401,20 @@ class FoundryStore implements IFileStore {
         }
 
         return content;
+        */
     }
 
     // Get the Folders at the path
-    async getDirectories(path: string): Promise<Folder[]> {
+    async getDirectories(path: any): Promise<string[]> {
+        console.log("Getting directories: ", path)
+
+        // Browse the target directory
+        const response: any = await FilePicker.browse('data', path)
+
+        // Get the last part of the path
+        const directories: string[] = response.dirs.map((dir: any) => dir.substring(dir.lastIndexOf('/') + 1));
+        return directories;
+        /*
         const pack = game.packs?.get(this.compendiumName);
         if (!pack) {
             throw new Error(`Compendium ${this.compendiumName} not found.`);
@@ -425,6 +440,7 @@ class FoundryStore implements IFileStore {
         // Collect all the folders within the found folder
         const folders: Folder[] = folder.children.map((f: any) => f.folder);
         return folders;
+        */
     }
 
     // Create a directory structure in the compendium pack
@@ -485,46 +501,50 @@ class FoundryStore implements IFileStore {
         await pack.configure({ locked: true });
     }
 
+    getBasePath(): string {
+        return "modules/ai-dungeon-master/storage";
+    }
+
     getSettingPath(settingName: string): string {
         settingName = this.stripInvalidFilenameChars(settingName);
-        return `settings/${settingName}`;
+        return `${this.getBasePath()}/settings/${settingName}`;
     }
 
     getCampaignPath(settingName: string, campaignName: string): string {
         settingName = this.stripInvalidFilenameChars(settingName);
         campaignName = this.stripInvalidFilenameChars(campaignName);
-        return `settings/${settingName}/${campaignName}`;
+        return `${this.getBasePath()}/settings/${settingName}/${campaignName}`;
     }
 
     getStorylinePath(settingName: string, campaignName: string, storylineName: string): string {
         settingName = this.stripInvalidFilenameChars(settingName);
         campaignName = this.stripInvalidFilenameChars(campaignName);
         storylineName = this.stripInvalidFilenameChars(storylineName);
-        return `settings/${settingName}/${campaignName}/storylines/${storylineName}.json`;
+        return `${this.getBasePath()}/settings/${settingName}/${campaignName}/storylines/${storylineName}.json`;
     }
 
     getCharactersPath(settingName: string, campaignName: string): string {
         settingName = this.stripInvalidFilenameChars(settingName);
         campaignName = this.stripInvalidFilenameChars(campaignName);
-        return `settings/${settingName}/${campaignName}/characters`;
+        return `${this.getBasePath()}/settings/${settingName}/${campaignName}/characters`;
     }
 
     getLocationsPath(settingName: string, campaignName: string): string {
         settingName = this.stripInvalidFilenameChars(settingName);
         campaignName = this.stripInvalidFilenameChars(campaignName);
-        return `settings/${settingName}/${campaignName}/locations`;
+        return `${this.getBasePath()}/settings/${settingName}/${campaignName}/locations`;
     }
 
     getFactionsPath(settingName: string, campaignName: string): string {
         settingName = this.stripInvalidFilenameChars(settingName);
         campaignName = this.stripInvalidFilenameChars(campaignName);
-        return `settings/${settingName}/${campaignName}/factions`;
+        return `${this.getBasePath()}/settings/${settingName}/${campaignName}/factions`;
     }
 
     getItemsPath(settingName: string, campaignName: string): string {
         settingName = this.stripInvalidFilenameChars(settingName);
         campaignName = this.stripInvalidFilenameChars(campaignName);
-        return `settings/${settingName}/${campaignName}/items`;
+        return `${this.getBasePath()}/settings/${settingName}/${campaignName}/items`;
     }
 
     getEntityBasePath(setting: Setting, campaign: Campaign, entityType: EntityType): string {

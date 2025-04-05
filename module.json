@@ -13,6 +13,7 @@
       "path": "packs/settings.db"
     }
   ],
+  "persistentStorage": true,
   "styles": [
     "styles/main-window.css",
     "styles/campaign-window.css"

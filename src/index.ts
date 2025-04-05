@@ -12,7 +12,8 @@ import { Campaign } from "./core/campaigns/models/Campaign";
 // Create a new instance of the core manager
 const textGenerationClient: ITextGenerationClient = new GoogleClient(process.env.GOOGLE_API_KEY as string);
 const imageGenerationClient: IImageGenerationClient = new ForgeClient();
-const fileStore: IFileStore = new FileSystemStore();
+const fileStore: IFileStore = new FileSystemStore('./storage');
+
 
 const coreManager = new CoreManager(textGenerationClient, imageGenerationClient, fileStore);
 

@@ -13,13 +13,10 @@ async function RepeatJsonGeneration(prompt: string,
         responseJson = TryParseJson(response, true)
 
         if (responseJson != null && regenerateCheckFunction(responseJson)) {
-            console.log("Regenerate check function passed")
             return responseJson
-        }else {
-            console.log("Regenerate check function failed")
         }
-
-        console.log("Failed to generate valid JSON, retrying...")
+        
+        console.log(`Attempt ${currentAttempt + 1} failed. Retrying...`)
 
         currentAttempt += 1
     }
@@ -31,7 +28,6 @@ function TryParseJson(buffer: string, returnString: boolean=false): any {
     const firstBracket = buffer.indexOf("{");
     const lastBracket = buffer.lastIndexOf("}");
     const jsonText = buffer.substring(firstBracket, lastBracket + 1);
-    console.log(jsonText);
 
     try {
         let textObj = JSON.parse(jsonText);

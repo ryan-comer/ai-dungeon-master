@@ -117,32 +117,32 @@ class FileSystemStore implements IFileStore {
 
     async saveSetting(settingName: string, setting: Setting): Promise<void> {
         const filePath = this.getSettingPath(settingName);
-        this.saveFile(filePath, JSON.stringify(setting, null, 2));
+        await this.saveFile(filePath, JSON.stringify(setting, null, 2));
     }
 
     async saveCampaign(settingName: string, campaignName: string, campaign: Campaign): Promise<void> {
         const filePath = this.getCampaignPath(settingName, campaignName);
-        this.saveFile(filePath, JSON.stringify(campaign, null, 2));
+        await this.saveFile(filePath, JSON.stringify(campaign, null, 2));
     }
 
     async saveStoryline(settingName: string, campaignName: string, storyline: Storyline): Promise<void> {
         const filePath = this.getStorylinePath(settingName, campaignName, storyline.name);
-        this.saveFile(filePath, JSON.stringify(storyline, null, 2));
+        await this.saveFile(filePath, JSON.stringify(storyline, null, 2));
     }
 
     async saveCharacter(settingName: string, campaignName: string, character: Character): Promise<void> {
         const filePath = path.join(this.getCharactersPath(settingName, campaignName), stripInvalidFilenameChars(character.name), `entity.json`);
-        this.saveFile(filePath, JSON.stringify(character, null, 2));
+        await this.saveFile(filePath, JSON.stringify(character, null, 2));
     }
 
     async saveLocation(settingName: string, campaignName: string, location: Location): Promise<void> {
         const filePath = path.join(this.getLocationsPath(settingName, campaignName), stripInvalidFilenameChars(location.name), `entity.json`);
-        this.saveFile(filePath, JSON.stringify(location, null, 2));
+        await this.saveFile(filePath, JSON.stringify(location, null, 2));
     }
 
     async saveFaction(settingName: string, campaignName: string, faction: Faction): Promise<void> {
         const filePath = path.join(this.getFactionsPath(settingName, campaignName), stripInvalidFilenameChars(faction.name), `entity.json`);
-        this.saveFile(filePath, JSON.stringify(faction, null, 2));
+        await this.saveFile(filePath, JSON.stringify(faction, null, 2));
     }
 
     async saveCharacterImage(settingName: string, campaignName: string, characterName: string, fileName: string, base64Image: string): Promise<void> {
@@ -179,7 +179,7 @@ class FileSystemStore implements IFileStore {
         if (!fs.existsSync(dir)) {
             fs.mkdirSync(dir, { recursive: true });
         }
-        this.saveFile(filePath, JSON.stringify(entity, null, 2));
+        await this.saveFile(filePath, JSON.stringify(entity, null, 2));
     }
 
     async getSemanticIndex(setting: Setting, campaign: Campaign, entityType: EntityType): Promise<any | null> {
@@ -199,10 +199,10 @@ class FileSystemStore implements IFileStore {
         if (!fs.existsSync(dir)) {
             fs.mkdirSync(dir, { recursive: true });
         }
-        this.saveFile(filePath, JSON.stringify(index, null, 2));
+        await this.saveFile(filePath, JSON.stringify(index, null, 2));
     }
 
-    saveFile(filePath: string, fileContent: string): void {
+    async saveFile(filePath: string, fileContent: string): Promise<void> {
         const dir = path.dirname(filePath);
         if (!fs.existsSync(dir)) {
             fs.mkdirSync(dir, { recursive: true });

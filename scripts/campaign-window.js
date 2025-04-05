@@ -3,14 +3,22 @@ import { CoreManager } from "../src/core/CoreManager.ts";
 import { ForgeClient } from "../src/generation/clients/ForgeClient.ts";
 import { GoogleClient } from "../src/generation/clients/GoogleClient.ts";
 import { FoundryStore } from "../src/utils/FoundryStore.ts";
+import { Logger } from "../src/utils/Logger.ts";
 
 export class CampaignWindow extends Application {
 
     settingsList;
     campaignList;
 
+    googleApiKey;
+    logger;
+    coreManager;
+
     constructor(options = {}) {
         super(options);
+        this.googleApiKey = game.settings.get("ai-dungeon-master", "googleApiKey");
+        this.logger = new Logger();
+        this.coreManager = new CoreManager(new GoogleClient(this.googleApiKey), new ForgeClient(), new FoundryStore(), this.logger);
     }
 
     static get defaultOptions() {
@@ -29,50 +37,73 @@ export class CampaignWindow extends Application {
 
         this.settingsList = html.find('#setting-list');
         this.campaignList = html.find('#campaign-list');
+        this.loadingIcon = html.find('#loading-icon');
+        this.statusText = html.find('#status-text');
 
         html.find('#create-setting-btn').click(this._onCreateSetting.bind(this));
         html.find('#create-campaign-btn').click(this._onCreateCampaign.bind(this));
 
         // Add change listener to settings list
         this.settingsList.change(this._onSettingChange.bind(this));
+
+        // Refesh settings and campaigns on load
+        this.refreshSettings().then(() => {
+            this.refreshCampaigns();
+        });
     }
 
-    _onCreateSetting(event) {
+    async _onCreateSetting(event) {
         event.preventDefault();
 
         const settingPrompt = document.getElementById('setting-prompt').value;
-        console.log("Setting Prompt:", settingPrompt);
+        const createSettingButton = document.getElementById('create-setting-btn');
+        createSettingButton.disabled = true; // Disable button
 
-        const googleApiKey = game.settings.get("ai-dungeon-master", "googleApiKey");
-        const coreManager = new CoreManager(new GoogleClient(googleApiKey), new ForgeClient(), new FoundryStore());
+        this.logger.on("info", (message) => {
+            this._setLoadingState(true, message);
+        });
 
-        coreManager.createSetting(settingPrompt).then(async (settingName) => {
-            console.log("Setting created:", settingName);
+        try {
+            const setting = await this.coreManager.createSetting(settingPrompt);
+            console.dir(setting)
             await this.refreshSettings();
-        })
+        } finally {
+            this._setLoadingState(false, "Idle");
+            createSettingButton.disabled = false; // Re-enable button
+        }
     }
 
     async _onCreateCampaign(event) {
         event.preventDefault();
 
         const campaignPrompt = document.getElementById('campaign-prompt').value;
-        console.log("Campaign Prompt:", campaignPrompt);
+        const createCampaignButton = document.getElementById('create-campaign-btn');
+        createCampaignButton.disabled = true; // Disable button
 
         // Check if a setting is selected
         const settingName = this.settingsList.val();
         if (!settingName) {
             ui.notifications.error("Please select a setting before creating a campaign.");
+            createCampaignButton.disabled = false; // Re-enable button
             return;
         }
 
-        console.log("Selected Setting:", settingName);
+        this.logger.on("info", (message) => {
+            this._setLoadingState(true, message);
+        });
 
-        const googleApiKey = game.settings.get("ai-dungeon-master", "googleApiKey");
-        const coreManager = new CoreManager(new GoogleClient(googleApiKey), new ForgeClient(), new FoundryStore());
-        const campaignName = await coreManager.createCampaign(settingName, campaignPrompt);
-        console.log("Campaign created:", campaignName);
+        try {
+            const campaign = await this.coreManager.createCampaign(settingName, campaignPrompt);
 
-        await this.refreshCampaigns();
+            for (let i = 0; i < campaign.milestones.length; i++) {
+                await this.coreManager.createStoryline(settingName, campaign.name, i, campaign.milestones[i].description);
+            }
+
+            await this.refreshCampaigns();
+        } finally {
+            this._setLoadingState(false, "Idle");
+            createCampaignButton.disabled = false; // Re-enable button
+        }
     }
 
     _onSettingChange(event) {
@@ -90,6 +121,8 @@ export class CampaignWindow extends Application {
     }
 
     async refreshSettings() {
+        console.log("Refreshing settings...");
+
         const store = new FoundryStore();
         const settings = await store.getSettings();
         
@@ -103,13 +136,20 @@ export class CampaignWindow extends Application {
         });
 
         this.checkEnableCampaigns();
-
-        console.log("Settings refreshed:", settings);
     }
 
     async refreshCampaigns() {
+        console.log("Refreshing campaigns...");
+
+        // Get the selected setting
+        const selectedSetting = this.settingsList.val();
+        if (!selectedSetting) {
+            this.logger.info("No setting selected, skipping campaign refresh.");
+            return; // No setting selected, do nothing
+        }
+
         const store = new FoundryStore();
-        const campaigns = await store.getCampaigns();
+        const campaigns = await store.getCampaigns(selectedSetting);
         
         // Clear existing campaigns
         this.campaignList.empty();
@@ -119,7 +159,10 @@ export class CampaignWindow extends Application {
             const option = $(`<option value="${campaign.name}">${campaign.name}</option>`);
             this.campaignList.append(option);
         });
+    }
 
-        console.log("Campaigns refreshed:", campaigns);
+    _setLoadingState(isLoading, status) {
+        this.loadingIcon.toggleClass('hidden', !isLoading);
+        this.statusText.text(status);
     }
 }

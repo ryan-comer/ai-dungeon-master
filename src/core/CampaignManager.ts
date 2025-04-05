@@ -4,6 +4,7 @@ import { IEntityManager } from "./interfaces/IEntitymanager";
 import { EntityManager } from "./EntityManager";
 
 import { IFileStore } from "../utils/interfaces/IFileStore";
+import { ILogger } from "../utils/interfaces/ILogger";
 
 import { ITextGenerationClient } from "../generation/clients/interfaces/ITextGenerationClient";
 import { OllamaClient } from "../generation/clients/OllamaClient";
@@ -29,13 +30,15 @@ import { isRight } from "fp-ts/lib/Either";
 class CampaignManager implements ICampaignManager {
 
     private fileStore: IFileStore;
+    private logger: ILogger;
     private textGenerationClient: ITextGenerationClient;
     private imageGenerationClient: IImageGenerationClient;
 
-    constructor(textGenerationClient: ITextGenerationClient, imageGenerationClient: IImageGenerationClient, iFileStore: IFileStore) {
+    constructor(textGenerationClient: ITextGenerationClient, imageGenerationClient: IImageGenerationClient, iFileStore: IFileStore, logger: ILogger) {
         this.textGenerationClient = textGenerationClient;
         this.imageGenerationClient = imageGenerationClient;
         this.fileStore = iFileStore;
+        this.logger = logger;
     }
 
     async createSetting(userPrompt: string): Promise<Setting> {
@@ -360,6 +363,7 @@ class CampaignManager implements ICampaignManager {
         // Initialize the setting characters
         for (const character of setting.notableFigures) {
             if (!(await entityManager.getCharacter(JSON.stringify(character)))) {
+                this.logger.info(`Creating character: ${character.name}`);
                 await entityManager.createCharacter(JSON.stringify(character));
             }
         }
@@ -367,6 +371,7 @@ class CampaignManager implements ICampaignManager {
         // Initialize the campaign characters
         for (const character of campaign.characters) {
             if (!(await entityManager.getCharacter(JSON.stringify(character)))) {
+                this.logger.info(`Creating character: ${character.name}`);
                 await entityManager.createCharacter(JSON.stringify(character));
             }
         }
@@ -376,6 +381,7 @@ class CampaignManager implements ICampaignManager {
             for (const segment of storyline.segments) {
                 for (const character of segment.characters) {
                     if (!(await entityManager.getCharacter(JSON.stringify(character)))) {
+                        this.logger.info(`Creating character: ${character.name}`);
                         await entityManager.createCharacter(JSON.stringify(character));
                     }
                 }
@@ -391,6 +397,7 @@ class CampaignManager implements ICampaignManager {
         // Initialize the setting factions
         for (const faction of setting.factions) {
             if(!(await entityManager.getFaction(JSON.stringify(faction)))) {
+                this.logger.info(`Creating faction: ${faction.name}`);
                 await entityManager.createFaction(JSON.stringify(faction));
             }
         }
@@ -398,6 +405,7 @@ class CampaignManager implements ICampaignManager {
         // Initialize the campaign factions
         for (const faction of campaign.factions) {
             if(!(await entityManager.getFaction(JSON.stringify(faction)))) {
+                this.logger.info(`Creating faction: ${faction.name}`);
                 await entityManager.createFaction(JSON.stringify(faction));
             }
         }
@@ -406,6 +414,7 @@ class CampaignManager implements ICampaignManager {
         if (storyline != null) {
             for (const faction of storyline.factions) {
                 if(!(await entityManager.getFaction(JSON.stringify(faction)))) {
+                    this.logger.info(`Creating faction: ${faction.name}`);
                     await entityManager.createFaction(JSON.stringify(faction));
                 }
             }
@@ -421,6 +430,7 @@ class CampaignManager implements ICampaignManager {
         for (const location of setting.geography) {
             for (const settlement of location.settlements) {
                 if(!(await entityManager.getLocation(JSON.stringify(settlement)))) {
+                    this.logger.info(`Creating location: ${settlement.name}`);
                     await entityManager.createLocation(JSON.stringify(settlement));
                 }
             }
@@ -429,6 +439,7 @@ class CampaignManager implements ICampaignManager {
         // Initialize the campaign locations
         for (const location of campaign.locations) {
             if(!(await entityManager.getLocation(JSON.stringify(location)))) {
+                this.logger.info(`Creating location: ${location.name}`);
                 await entityManager.createLocation(JSON.stringify(location));
             }
         }
@@ -438,6 +449,7 @@ class CampaignManager implements ICampaignManager {
             for (const segment of storyline.segments) {
                 for (const location of segment.locations) {
                     if(!(await entityManager.getLocation(JSON.stringify(location)))) {
+                        this.logger.info(`Creating location: ${location.name}`);
                         await entityManager.createLocation(JSON.stringify(location));
                     }
                 }
