@@ -1,7 +1,7 @@
-import { Character } from "../campaigns/models/Character";
-import { Location } from "../campaigns/models/Location";
-import { Faction } from "../campaigns/models/Faction";
-import { Storyline } from "../campaigns/models/Storyline";
+import { Character } from "../models/Character";
+import { Location } from "../models/Location";
+import { Faction } from "../models/Faction";
+import { Storyline } from "../models/Storyline";
 
 interface IEntityManager {
     createCharacter(userPrompt: string, storyline?: Storyline): Promise<Character>;

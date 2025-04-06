@@ -15,12 +15,12 @@ import { RepeatJsonGeneration } from "../generation/clients/utils";
 import { IImageGenerationClient } from "../generation/clients/interfaces/IImageGenerationClient";
 import { ForgeClient } from "../generation/clients/ForgeClient";
 
-import { Campaign, CampaignCodec } from "./campaigns/models/Campaign";
-import { Setting, SettingCodec } from "./campaigns/models/Setting";
-import { Storyline, StorylineCodec } from "./campaigns/models/Storyline";
-import { Character, CharacterCodec } from "./campaigns/models/Character";
-import { Faction, FactionCodec } from "./campaigns/models/Faction";
-import { Location, LocationCodec } from "./campaigns/models/Location";
+import { Campaign, CampaignCodec } from "./models/Campaign";
+import { Setting, SettingCodec } from "./models/Setting";
+import { Storyline, StorylineCodec } from "./models/Storyline";
+import { Character, CharacterCodec } from "./models/Character";
+import { Faction, FactionCodec } from "./models/Faction";
+import { Location, LocationCodec } from "./models/Location";
 
 import { EntityType, ISemanticIndex } from "./interfaces/ISemanticIndex";
 import { SemanticIndex } from "./SemanticIndex";
@@ -228,6 +228,7 @@ class CampaignManager implements ICampaignManager {
         });
 
         let campaignJson: Campaign = JSON.parse(campaign);
+        campaignJson.setting = settingName;
 
         await this.fileStore.saveCampaign(settingName, campaignJson.name, campaignJson);
 
@@ -335,6 +336,8 @@ class CampaignManager implements ICampaignManager {
         });
 
         const storylineJson: Storyline = JSON.parse(storyline);
+        storylineJson.name = milestone.name; // Set the name of the storyline to the name of the milestone
+        storylineJson.campaign = campaignName; // Set the campaign name for the storyline
 
         await this.fileStore.saveStoryline(settingName, campaignName, storylineJson);
 

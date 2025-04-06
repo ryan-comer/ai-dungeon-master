@@ -1,16 +1,16 @@
 import { IEntityManager } from "./interfaces/IEntitymanager";
 import { EntityType } from "./interfaces/ISemanticIndex";
 
-import { Character } from "./campaigns/models/Character";
-import { Location } from "./campaigns/models/Location";
-import { Faction } from "./campaigns/models/Faction";
-import { Setting } from "./campaigns/models/Setting";
-import { Campaign } from "./campaigns/models/Campaign";
-import { Storyline } from "./campaigns/models/Storyline";
+import { Character } from "./models/Character";
+import { Location } from "./models/Location";
+import { Faction } from "./models/Faction";
+import { Setting } from "./models/Setting";
+import { Campaign } from "./models/Campaign";
+import { Storyline } from "./models/Storyline";
 
-import { CharacterCodec } from "./campaigns/models/Character";
-import { LocationCodec } from "./campaigns/models/Location";
-import { FactionCodec } from "./campaigns/models/Faction";
+import { CharacterCodec } from "./models/Character";
+import { LocationCodec } from "./models/Location";
+import { FactionCodec } from "./models/Faction";
 import { isRight } from "fp-ts/lib/Either";
 
 import { ITextGenerationClient } from "../generation/clients/interfaces/ITextGenerationClient";

@@ -3,6 +3,7 @@ import * as t from 'io-ts';
 // Model class that represents a campaign
 class Campaign {
     name: string;
+    setting: string;
     description: string;
     objectives: string[];
     overview: {
@@ -34,6 +35,7 @@ class Campaign {
 
     constructor() {
         this.name = '';
+        this.setting = '';
         this.description = '';
         this.objectives = [];
         this.overview = {
@@ -51,6 +53,7 @@ class Campaign {
 const CampaignCodec = t.type({
     name: t.string,
     description: t.string,
+    setting: t.string,
     objectives: t.array(t.string),
     overview: t.type({
         description: t.string,

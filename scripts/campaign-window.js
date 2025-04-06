@@ -1,9 +1,9 @@
 import { CoreManager } from "../src/core/CoreManager.ts";
-
 import { ForgeClient } from "../src/generation/clients/ForgeClient.ts";
 import { GoogleClient } from "../src/generation/clients/GoogleClient.ts";
 import { FoundryStore } from "../src/utils/FoundryStore.ts";
 import { Logger } from "../src/utils/Logger.ts";
+import { getCoreManager } from "./core-manager-instance.js";
 
 export class CampaignWindow extends Application {
 
@@ -16,9 +16,7 @@ export class CampaignWindow extends Application {
 
     constructor(options = {}) {
         super(options);
-        this.googleApiKey = game.settings.get("ai-dungeon-master", "googleApiKey");
-        this.logger = new Logger();
-        this.coreManager = new CoreManager(new GoogleClient(this.googleApiKey), new ForgeClient(), new FoundryStore(), this.logger);
+        this.coreManager = getCoreManager();
     }
 
     static get defaultOptions() {
@@ -40,8 +38,13 @@ export class CampaignWindow extends Application {
         this.loadingIcon = html.find('#loading-icon');
         this.statusText = html.find('#status-text');
 
-        html.find('#create-setting-btn').click(this._onCreateSetting.bind(this));
-        html.find('#create-campaign-btn').click(this._onCreateCampaign.bind(this));
+        this.createSettingButton = html.find('#create-setting-btn');
+        this.createCampaignButton = html.find('#create-campaign-btn');
+        this.loadCampaignButton = html.find('#load-campaign-btn');
+
+        this.createSettingButton.click(this._onCreateSetting.bind(this));
+        this.createCampaignButton.click(this._onCreateCampaign.bind(this));
+        this.loadCampaignButton.click(this._onLoadCampaign.bind(this));
 
         // Add change listener to settings list
         this.settingsList.change(this._onSettingChange.bind(this));
@@ -106,6 +109,32 @@ export class CampaignWindow extends Application {
         }
     }
 
+    async _onLoadCampaign(event) {
+        event.preventDefault();
+
+        const selectedCampaign = this.campaignList.val();
+        if (!selectedCampaign) {
+            ui.notifications.error("Please select a campaign to load.");
+            return;
+        }
+
+        const selectedSetting = this.settingsList.val();
+        if (!selectedSetting) {
+            ui.notifications.error("Please select a setting before loading a campaign.");
+            return;
+        }
+
+        try {
+            this._setLoadingState(true, "Loading campaign...");
+            const campaign = await this.coreManager.loadCampaign(selectedSetting, selectedCampaign);
+            document.getElementById('campaign-loaded').textContent = campaign.name;
+            document.getElementById('campaign-loaded').classList.remove('hidden');
+            ui.notifications.info(`Campaign "${campaign.name}" loaded successfully.`);
+        } finally {
+            this._setLoadingState(false, "Idle");
+        }
+    }
+
     _onSettingChange(event) {
         this.checkEnableCampaigns();
     }
@@ -159,6 +188,10 @@ export class CampaignWindow extends Application {
             const option = $(`<option value="${campaign.name}">${campaign.name}</option>`);
             this.campaignList.append(option);
         });
+
+        if (campaigns.length > 0) {
+            this.loadCampaignButton.prop('disabled', false);
+        }
     }
 
     _setLoadingState(isLoading, status) {

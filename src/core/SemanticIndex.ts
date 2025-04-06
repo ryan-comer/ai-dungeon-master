@@ -5,8 +5,8 @@ import { ITextGenerationClient } from "../generation/clients/interfaces/ITextGen
 import { OllamaClient } from "../generation/clients/OllamaClient";
 import { RepeatJsonGeneration } from "../generation/clients/utils";
 
-import { Setting } from "./campaigns/models/Setting";
-import { Campaign } from "./campaigns/models/Campaign";
+import { Setting } from "./models/Setting";
+import { Campaign } from "./models/Campaign";
 
 import { stripInvalidFilenameChars } from "../utils/utils";
 

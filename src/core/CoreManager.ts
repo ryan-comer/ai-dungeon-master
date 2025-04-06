@@ -1,6 +1,8 @@
 import { ICoreManager } from "./interfaces/ICoreManager";
 import { ICampaignManager } from "./interfaces/ICampaignManager";
 import { CampaignManager } from "./CampaignManager";
+import { IContextManager } from "./interfaces/IContextManager";
+import { ContextManager } from "./ContextManager";
 
 import { ITextGenerationClient } from "../generation/clients/interfaces/ITextGenerationClient";
 import { IImageGenerationClient } from "../generation/clients/interfaces/IImageGenerationClient";
@@ -8,32 +10,55 @@ import { IImageGenerationClient } from "../generation/clients/interfaces/IImageG
 import { IFileStore } from "../utils/interfaces/IFileStore";
 import { ILogger } from "../utils/interfaces/ILogger";
 import { Logger } from "../utils/Logger";
+import { sendChatMessage } from "../utils/utils";
 
-import { Setting } from "./campaigns/models/Setting";
-import { Campaign } from "./campaigns/models/Campaign";
-import { Storyline } from "./campaigns/models/Storyline";
+import { Setting } from "./models/Setting";
+import { Campaign } from "./models/Campaign";
+import { Storyline } from "./models/Storyline";
 
 import { Mutex } from "async-mutex"; // Add this import for the lock mechanism
+import { EventEmitter } from "events"; // Add this import for event handling
 
 class CoreManager implements ICoreManager {
     private campaignManager: ICampaignManager;
+    private contextManager: IContextManager
     private logger: ILogger;
     private creationLock: Mutex; // Add a Mutex instance
+    private eventEmitter: EventEmitter; // Add an EventEmitter instance
+
+    private loadedCampaign: Campaign | null = null; // Store the loaded campaign
+    private loadedSetting: Setting | null = null; // Store the loaded setting
+    private loadedStoryline: Storyline | null = null; // Store the loaded storyline
 
     constructor(iTextGenerationClient: ITextGenerationClient, iImageGenerationClient: IImageGenerationClient, fileStore: IFileStore, logger: ILogger=new Logger()) {
         this.campaignManager = new CampaignManager(iTextGenerationClient, iImageGenerationClient, fileStore, logger);
         this.logger = logger;
         this.creationLock = new Mutex(); // Initialize the Mutex
+        this.contextManager = new ContextManager(iTextGenerationClient, fileStore, logger); // Initialize the context manager
+        this.eventEmitter = new EventEmitter(); // Initialize the EventEmitter
     }
 
     initialize(): void {
         console.log("Initializing the core manager...");
     }
 
+    on(event: string, callback: (...args: any[]) => void): void {
+        this.eventEmitter.on(event, callback); // Register an event listener
+    }
+
+    off(event: string, callback: (...args: any[]) => void): void {
+        this.eventEmitter.off(event, callback); // Remove an event listener
+    }
+
+    private emit(event: string, ...args: any[]): void {
+        this.eventEmitter.emit(event, ...args); // Emit an event
+    }
+
     async createSetting(userPrompt: string = ""): Promise<Setting> {
         return this.creationLock.runExclusive(async () => { // Use the lock
             this.logger.info("Creating a setting...");
             const setting: Setting = await this.campaignManager.createSetting(userPrompt);
+            this.emit("settingCreated", setting); // Emit event
             return setting;
         });
     }
@@ -42,6 +67,7 @@ class CoreManager implements ICoreManager {
         return this.creationLock.runExclusive(async () => { // Use the lock
             this.logger.info("Creating a campaign...");
             const campaign: Campaign = await this.campaignManager.createCampaign(settingName, userPrompt);
+            this.emit("campaignCreated", campaign); // Emit event
             return campaign
         });
     }
@@ -50,6 +76,7 @@ class CoreManager implements ICoreManager {
         return this.creationLock.runExclusive(async () => { // Use the lock
             this.logger.info("Creating a storyline...");
             const storyline: Storyline = await this.campaignManager.createStoryline(settingName, campaignName, milestoneIndex, userPrompt);
+            this.emit("storylineCreated", storyline); // Emit event
             return storyline;
         });
     }
@@ -62,6 +89,36 @@ class CoreManager implements ICoreManager {
     }
     async getStoryline(settingName: string, campaignName: string, storylineName: string): Promise<Storyline | null> {    
         return this.campaignManager.getStoryline(settingName, campaignName, storylineName);
+    }
+
+    async loadCampaign(settingName: string, campaignName: string): Promise<Campaign | null> {
+        const campaign: Campaign | null = await this.campaignManager.getCampaign(settingName, campaignName);
+        if (!campaign) {
+            this.logger.error(`Campaign ${campaignName} not found in setting ${settingName}`);
+            return null;
+        }
+        this.loadedCampaign = campaign; // Store the loaded campaign
+
+        const setting: Setting | null = await this.campaignManager.getSetting(settingName);
+        if (!setting) {
+            this.logger.error(`Setting ${settingName} not found`);
+            return null;
+        }
+        this.loadedSetting = setting; // Store the loaded setting
+
+        this.logger.info("Loading campaign context...");
+        this.contextManager.loadContext(setting, campaign);
+        this.contextManager.startCampaign(); // Start the campaign context
+        return this.loadedCampaign;
+    }
+
+    async getLoadedCampaign(): Promise<Campaign | null> {
+        return this.loadedCampaign
+    }
+
+    // User sent a message to the AI Dungeon Master
+    async userMessage(message: string): Promise<void> {
+        await sendChatMessage(message);
     }
 
 }

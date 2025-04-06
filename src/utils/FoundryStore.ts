@@ -1,10 +1,10 @@
 import { IFileStore } from "./interfaces/IFileStore";
-import { Setting } from "../core/campaigns/models/Setting";
-import { Campaign } from "../core/campaigns/models/Campaign";
-import { Storyline } from "../core/campaigns/models/Storyline";
-import { Character } from "../core/campaigns/models/Character";
-import { Location } from "../core/campaigns/models/Location";
-import { Faction } from "../core/campaigns/models/Faction";
+import { Setting } from "../core/models/Setting";
+import { Campaign } from "../core/models/Campaign";
+import { Storyline } from "../core/models/Storyline";
+import { Character } from "../core/models/Character";
+import { Location } from "../core/models/Location";
+import { Faction } from "../core/models/Faction";
 import { EntityType } from "../core/SemanticIndex";
 
 class FoundryStore implements IFileStore {

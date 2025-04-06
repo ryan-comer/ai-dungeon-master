@@ -1,6 +1,6 @@
-import { Campaign } from '../campaigns/models/Campaign';
-import { Setting } from '../campaigns/models/Setting';
-import { Storyline } from '../campaigns/models/Storyline';
+import { Campaign } from '../models/Campaign';
+import { Setting } from '../models/Setting';
+import { Storyline } from '../models/Storyline';
 
 interface ICampaignManager {
     createSetting(userPrompt: string): Promise<Setting>;

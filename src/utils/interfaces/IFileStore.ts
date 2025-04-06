@@ -1,10 +1,10 @@
-import { Setting } from "../../core/campaigns/models/Setting";
-import { Campaign } from "../../core/campaigns/models/Campaign";
-import { Storyline } from "../../core/campaigns/models/Storyline";
+import { Setting } from "../../core/models/Setting";
+import { Campaign } from "../../core/models/Campaign";
+import { Storyline } from "../../core/models/Storyline";
 import { EntityType } from "../../core/SemanticIndex";
-import { Character } from "../../core/campaigns/models/Character";
-import { Location } from "../../core/campaigns/models/Location";
-import { Faction } from "../../core/campaigns/models/Faction";
+import { Character } from "../../core/models/Character";
+import { Location } from "../../core/models/Location";
+import { Faction } from "../../core/models/Faction";
 
 interface IFileStore {
     // Helper functions to get paths

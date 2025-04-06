@@ -1,6 +1,11 @@
 import {
     CampaignWindow
 } from './campaign-window.js';
+import { getCoreManager } from "./core-manager-instance.js";
+
+function campaignLoaded(campaign) {
+
+}
 
 export function initializeMainWindow() {
     // Wait for the DOM to be fully loaded
@@ -19,14 +24,11 @@ export function initializeMainWindow() {
             })
             .then(() => {
                 document.getElementById('ai-dm-submit-prompt').addEventListener('click', () => {
+                    const coreManager = getCoreManager();
+
                     const prompt = document.getElementById('ai-dm-prompt').value;
-                    const responseElement = document.getElementById('ai-dm-status-message');
 
-                    // Simulate AI response (replace this with actual API call logic)
-                    const simulatedResponse = `You said: "${prompt}"`;
-
-                    // Display the response
-                    responseElement.textContent = simulatedResponse;
+                    coreManager.userMessage(prompt);
                 });
 
                 document.getElementById('ai-dm-settings-button').addEventListener('click', () => {

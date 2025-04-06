@@ -2,6 +2,7 @@ import * as t from 'io-ts';
 
 class Storyline {
 	name: string;
+	campaign: string;
 	description: string;
 	objectives: string[];
 	segments: {
@@ -31,6 +32,7 @@ class Storyline {
 
 	constructor(data: {
 		name: string;
+		campaign: string;
 		description: string;
 		objectives: string[];
 		segments: {
@@ -59,6 +61,7 @@ class Storyline {
 		}[];
 	}) {
 		this.name = data.name;
+		this.campaign = '';
 		this.description = data.description;
 		this.objectives = data.objectives;
 		this.segments = data.segments;
@@ -68,6 +71,7 @@ class Storyline {
 
 const StorylineCodec = t.type({
 	name: t.string,
+	campaign: t.string,
 	description: t.string,
 	objectives: t.array(t.string),
 	segments: t.array(

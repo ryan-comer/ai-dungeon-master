@@ -6,8 +6,8 @@ import { ITextGenerationClient } from "./generation/clients/interfaces/ITextGene
 import { IImageGenerationClient } from "./generation/clients/interfaces/IImageGenerationClient";
 import { IFileStore } from "./utils/interfaces/IFileStore";
 import { FileSystemStore } from "./utils/FileSystemStore";
-import { Setting } from "./core/campaigns/models/Setting";
-import { Campaign } from "./core/campaigns/models/Campaign";
+import { Setting } from "./core/models/Setting";
+import { Campaign } from "./core/models/Campaign";
 
 // Create a new instance of the core manager
 const textGenerationClient: ITextGenerationClient = new GoogleClient(process.env.GOOGLE_API_KEY as string);
