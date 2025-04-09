@@ -1,7 +1,6 @@
 import { ICampaignManager } from "./interfaces/ICampaignManager";
 
-import { IEntityManager } from "./interfaces/IEntitymanager";
-import { EntityManager } from "./EntityManager";
+import { IEntityManager } from "./interfaces/IEntityManager";
 
 import { IFileStore } from "../utils/interfaces/IFileStore";
 import { ILogger } from "../utils/interfaces/ILogger";
@@ -18,12 +17,6 @@ import { ForgeClient } from "../generation/clients/ForgeClient";
 import { Campaign, CampaignCodec } from "./models/Campaign";
 import { Setting, SettingCodec } from "./models/Setting";
 import { Storyline, StorylineCodec } from "./models/Storyline";
-import { Character, CharacterCodec } from "./models/Character";
-import { Faction, FactionCodec } from "./models/Faction";
-import { Location, LocationCodec } from "./models/Location";
-
-import { EntityType, ISemanticIndex } from "./interfaces/ISemanticIndex";
-import { SemanticIndex } from "./SemanticIndex";
 
 import { isRight } from "fp-ts/lib/Either";
 
@@ -33,12 +26,14 @@ class CampaignManager implements ICampaignManager {
     private logger: ILogger;
     private textGenerationClient: ITextGenerationClient;
     private imageGenerationClient: IImageGenerationClient;
+    private entityManager: IEntityManager;
 
-    constructor(textGenerationClient: ITextGenerationClient, imageGenerationClient: IImageGenerationClient, iFileStore: IFileStore, logger: ILogger) {
+    constructor(textGenerationClient: ITextGenerationClient, imageGenerationClient: IImageGenerationClient, iFileStore: IFileStore, entityManager:IEntityManager, logger: ILogger) {
         this.textGenerationClient = textGenerationClient;
         this.imageGenerationClient = imageGenerationClient;
         this.fileStore = iFileStore;
         this.logger = logger;
+        this.entityManager = entityManager;
     }
 
     async createSetting(userPrompt: string): Promise<Setting> {
@@ -233,9 +228,9 @@ class CampaignManager implements ICampaignManager {
         await this.fileStore.saveCampaign(settingName, campaignJson.name, campaignJson);
 
         // Initialize the entities for the campaign
-        await this.initializeCharacters(JSON.parse(setting), JSON.parse(campaign), null);
-        await this.initializeFactions(JSON.parse(setting), JSON.parse(campaign), null);
-        await this.initializeLocations(JSON.parse(setting), JSON.parse(campaign), null);
+        await this.initializeCharacters(settingJson, campaignJson, null);
+        await this.initializeFactions(settingJson, campaignJson, null);
+        await this.initializeLocations(settingJson, campaignJson, null);
 
         return campaignJson;
     }
@@ -342,9 +337,9 @@ class CampaignManager implements ICampaignManager {
         await this.fileStore.saveStoryline(settingName, campaignName, storylineJson);
 
         // Initialize the entities for the storyline
-        await this.initializeCharacters(JSON.parse(setting), JSON.parse(campaign), storylineJson);
-        await this.initializeFactions(JSON.parse(setting), JSON.parse(campaign), storylineJson);
-        await this.initializeLocations(JSON.parse(setting), JSON.parse(campaign), storylineJson);
+        await this.initializeCharacters(settingJson, campaignJson, storylineJson);
+        await this.initializeFactions(settingJson, campaignJson, storylineJson);
+        await this.initializeLocations(settingJson, campaignJson, storylineJson);
 
         return storylineJson;
     }
@@ -361,21 +356,20 @@ class CampaignManager implements ICampaignManager {
 
     // Initialize the characters for the campaign
     private async initializeCharacters(setting: Setting, campaign: Campaign, storyline: Storyline|null): Promise<void> {
-        const entityManager: IEntityManager = new EntityManager(setting, campaign, this.textGenerationClient, this.imageGenerationClient, this.fileStore);
 
         // Initialize the setting characters
         for (const character of setting.notableFigures) {
-            if (!(await entityManager.getCharacter(JSON.stringify(character)))) {
+            if (!(await this.entityManager.getCharacterFromContext(JSON.stringify(character), setting, campaign))) {
                 this.logger.info(`Creating character: ${character.name}`);
-                await entityManager.createCharacter(JSON.stringify(character));
+                await this.entityManager.createCharacter(JSON.stringify(character), setting, campaign);
             }
         }
 
         // Initialize the campaign characters
         for (const character of campaign.characters) {
-            if (!(await entityManager.getCharacter(JSON.stringify(character)))) {
+            if (!(await this.entityManager.getCharacterFromContext(JSON.stringify(character), setting, campaign))) {
                 this.logger.info(`Creating character: ${character.name}`);
-                await entityManager.createCharacter(JSON.stringify(character));
+                await this.entityManager.createCharacter(JSON.stringify(character), setting, campaign);
             }
         }
 
@@ -383,9 +377,9 @@ class CampaignManager implements ICampaignManager {
         if (storyline != null) {
             for (const segment of storyline.segments) {
                 for (const character of segment.characters) {
-                    if (!(await entityManager.getCharacter(JSON.stringify(character)))) {
+                    if (!(await this.entityManager.getCharacterFromContext(JSON.stringify(character), setting, campaign))) {
                         this.logger.info(`Creating character: ${character.name}`);
-                        await entityManager.createCharacter(JSON.stringify(character));
+                        await this.entityManager.createCharacter(JSON.stringify(character), setting, campaign, storyline);
                     }
                 }
             }
@@ -395,30 +389,28 @@ class CampaignManager implements ICampaignManager {
 
     // Initialize the factions for the campaign
     private async initializeFactions(setting: Setting, campaign: Campaign, storyline: Storyline|null): Promise<void> {
-        const entityManager: IEntityManager = new EntityManager(setting, campaign, this.textGenerationClient, this.imageGenerationClient, this.fileStore);
-
         // Initialize the setting factions
         for (const faction of setting.factions) {
-            if(!(await entityManager.getFaction(JSON.stringify(faction)))) {
+            if(!(await this.entityManager.getFactionFromContext(JSON.stringify(faction), setting, campaign))) {
                 this.logger.info(`Creating faction: ${faction.name}`);
-                await entityManager.createFaction(JSON.stringify(faction));
+                await this.entityManager.createFaction(JSON.stringify(faction), setting, campaign);
             }
         }
 
         // Initialize the campaign factions
         for (const faction of campaign.factions) {
-            if(!(await entityManager.getFaction(JSON.stringify(faction)))) {
+            if(!(await this.entityManager.getFactionFromContext(JSON.stringify(faction), setting, campaign))) {
                 this.logger.info(`Creating faction: ${faction.name}`);
-                await entityManager.createFaction(JSON.stringify(faction));
+                await this.entityManager.createFaction(JSON.stringify(faction), setting, campaign);
             }
         }
 
         // Initialize the storyline factions
         if (storyline != null) {
             for (const faction of storyline.factions) {
-                if(!(await entityManager.getFaction(JSON.stringify(faction)))) {
+                if(!(await this.entityManager.getFactionFromContext(JSON.stringify(faction), setting, campaign))) {
                     this.logger.info(`Creating faction: ${faction.name}`);
-                    await entityManager.createFaction(JSON.stringify(faction));
+                    await this.entityManager.createFaction(JSON.stringify(faction), setting, campaign, storyline);
                 }
             }
         }
@@ -427,23 +419,21 @@ class CampaignManager implements ICampaignManager {
 
     // Initialize the locations for the campaign
     private async initializeLocations(setting: Setting, campaign: Campaign, storyline: Storyline|null): Promise<void> {
-        const entityManager: IEntityManager = new EntityManager(setting, campaign, this.textGenerationClient, this.imageGenerationClient, this.fileStore);
-
         // Initialize the setting locations
         for (const location of setting.geography) {
             for (const settlement of location.settlements) {
-                if(!(await entityManager.getLocation(JSON.stringify(settlement)))) {
+                if(!(await this.entityManager.getLocationFromContext(JSON.stringify(settlement), setting, campaign))) {
                     this.logger.info(`Creating location: ${settlement.name}`);
-                    await entityManager.createLocation(JSON.stringify(settlement));
+                    await this.entityManager.createLocation(JSON.stringify(settlement), setting, campaign);
                 }
             }
         }
 
         // Initialize the campaign locations
         for (const location of campaign.locations) {
-            if(!(await entityManager.getLocation(JSON.stringify(location)))) {
+            if(!(await this.entityManager.getLocationFromContext(JSON.stringify(location), setting, campaign))) {
                 this.logger.info(`Creating location: ${location.name}`);
-                await entityManager.createLocation(JSON.stringify(location));
+                await this.entityManager.createLocation(JSON.stringify(location), setting, campaign);
             }
         }
 
@@ -451,9 +441,9 @@ class CampaignManager implements ICampaignManager {
         if (storyline != null) {
             for (const segment of storyline.segments) {
                 for (const location of segment.locations) {
-                    if(!(await entityManager.getLocation(JSON.stringify(location)))) {
+                    if(!(await this.entityManager.getLocationFromContext(JSON.stringify(location), setting, campaign))) {
                         this.logger.info(`Creating location: ${location.name}`);
-                        await entityManager.createLocation(JSON.stringify(location));
+                        await this.entityManager.createLocation(JSON.stringify(location), setting, campaign, storyline);
                     }
                 }
             }

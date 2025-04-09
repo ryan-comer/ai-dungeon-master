@@ -1,10 +1,10 @@
 interface ILogger {
-    log: (message: string) => void;
-    error: (message: string) => void;
-    warn: (message: string) => void;
-    info: (message: string) => void;
-    debug: (message: string) => void;
-    trace: (message: string) => void;
+    log: (message: string, ...optionalParams: any[]) => void;
+    error: (message: string, ...optionalParams: any[]) => void;
+    warn: (message: string, ...optionalParams: any[]) => void;
+    info: (message: string, ...optionalParams: any[]) => void;
+    debug: (message: string, ...optionalParams: any[]) => void;
+    trace: (message: string, ...optionalParams: any[]) => void;
 
     // Events
     on: (event: string, callback: (...args: any[]) => void) => void;

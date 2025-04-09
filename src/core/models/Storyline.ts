@@ -71,7 +71,7 @@ class Storyline {
 
 const StorylineCodec = t.type({
 	name: t.string,
-	campaign: t.string,
+    campaign: t.union([t.string, t.undefined]),
 	description: t.string,
 	objectives: t.array(t.string),
 	segments: t.array(

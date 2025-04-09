@@ -115,6 +115,69 @@ class FileSystemStore implements IFileStore {
         return JSON.parse(factionData) as Faction;
     }
 
+    async getCharacters(settingName: string, campaignName: string): Promise<Character[]> {
+        const charactersDir = this.getCharactersPath(settingName, campaignName);
+        if (!fs.existsSync(charactersDir)) {
+            return [];
+        }
+
+        // Get all directories in the characters folder
+        const characterDirs = fs.readdirSync(charactersDir).filter(file => fs.statSync(path.join(charactersDir, file)).isDirectory());
+
+        const characters: Character[] = [];
+        for (const dir of characterDirs) {
+            const characterPath = path.join(charactersDir, dir, "entity.json");
+            if (fs.existsSync(characterPath)) {
+                const characterData = this.loadFile(characterPath);
+                characters.push(JSON.parse(characterData) as Character);
+            }
+        }
+
+        return characters;
+    }
+
+    async getLocations(settingName: string, campaignName: string): Promise<Location[]> {
+        const locationsDir = this.getLocationsPath(settingName, campaignName);
+        if (!fs.existsSync(locationsDir)) {
+            return [];
+        }
+
+        // Get all directories in the locations folder
+        const locationDirs = fs.readdirSync(locationsDir).filter(file => fs.statSync(path.join(locationsDir, file)).isDirectory());
+
+        const locations: Location[] = [];
+        for (const dir of locationDirs) {
+            const locationPath = path.join(locationsDir, dir, "entity.json");
+            if (fs.existsSync(locationPath)) {
+                const locationData = this.loadFile(locationPath);
+                locations.push(JSON.parse(locationData) as Location);
+            }
+        }
+
+        return locations;
+    }
+
+    async getFactions(settingName: string, campaignName: string): Promise<Faction[]> {
+        const factionsDir = this.getFactionsPath(settingName, campaignName);
+        if (!fs.existsSync(factionsDir)) {
+            return [];
+        }
+
+        // Get all directories in the factions folder
+        const factionDirs = fs.readdirSync(factionsDir).filter(file => fs.statSync(path.join(factionsDir, file)).isDirectory());
+
+        const factions: Faction[] = [];
+        for (const dir of factionDirs) {
+            const factionPath = path.join(factionsDir, dir, "entity.json");
+            if (fs.existsSync(factionPath)) {
+                const factionData = this.loadFile(factionPath);
+                factions.push(JSON.parse(factionData) as Faction);
+            }
+        }
+
+        return factions;
+    }
+
     async saveSetting(settingName: string, setting: Setting): Promise<void> {
         const filePath = this.getSettingPath(settingName);
         await this.saveFile(filePath, JSON.stringify(setting, null, 2));

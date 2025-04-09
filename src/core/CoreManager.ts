@@ -3,6 +3,8 @@ import { ICampaignManager } from "./interfaces/ICampaignManager";
 import { CampaignManager } from "./CampaignManager";
 import { IContextManager } from "./interfaces/IContextManager";
 import { ContextManager } from "./ContextManager";
+import { IEntityManager } from "./interfaces/IEntityManager";
+import { EntityManager } from "./EntityManager";
 
 import { ITextGenerationClient } from "../generation/clients/interfaces/ITextGenerationClient";
 import { IImageGenerationClient } from "../generation/clients/interfaces/IImageGenerationClient";
@@ -22,6 +24,7 @@ import { EventEmitter } from "events"; // Add this import for event handling
 class CoreManager implements ICoreManager {
     private campaignManager: ICampaignManager;
     private contextManager: IContextManager
+    private entityManager: IEntityManager;
     private logger: ILogger;
     private creationLock: Mutex; // Add a Mutex instance
     private eventEmitter: EventEmitter; // Add an EventEmitter instance
@@ -31,10 +34,11 @@ class CoreManager implements ICoreManager {
     private loadedStoryline: Storyline | null = null; // Store the loaded storyline
 
     constructor(iTextGenerationClient: ITextGenerationClient, iImageGenerationClient: IImageGenerationClient, fileStore: IFileStore, logger: ILogger=new Logger()) {
-        this.campaignManager = new CampaignManager(iTextGenerationClient, iImageGenerationClient, fileStore, logger);
+        this.entityManager = new EntityManager(iTextGenerationClient, iImageGenerationClient, fileStore);
+        this.campaignManager = new CampaignManager(iTextGenerationClient, iImageGenerationClient, fileStore, this.entityManager, logger);
         this.logger = logger;
         this.creationLock = new Mutex(); // Initialize the Mutex
-        this.contextManager = new ContextManager(iTextGenerationClient, fileStore, logger); // Initialize the context manager
+        this.contextManager = new ContextManager(iTextGenerationClient, fileStore, this.entityManager, logger); // Initialize the context manager
         this.eventEmitter = new EventEmitter(); // Initialize the EventEmitter
     }
 
@@ -48,6 +52,10 @@ class CoreManager implements ICoreManager {
 
     off(event: string, callback: (...args: any[]) => void): void {
         this.eventEmitter.off(event, callback); // Remove an event listener
+    }
+
+    Logger(): ILogger {
+        return this.logger; // Return the logger instance
     }
 
     private emit(event: string, ...args: any[]): void {
@@ -108,7 +116,7 @@ class CoreManager implements ICoreManager {
 
         this.logger.info("Loading campaign context...");
         this.contextManager.loadContext(setting, campaign);
-        this.contextManager.startCampaign(); // Start the campaign context
+        this.logger.info("Campaign context loaded.");
         return this.loadedCampaign;
     }
 
@@ -116,9 +124,14 @@ class CoreManager implements ICoreManager {
         return this.loadedCampaign
     }
 
+    async startSession(): Promise<void> {
+        this.contextManager.startSession(); // Start the session
+    }
+
     // User sent a message to the AI Dungeon Master
     async userMessage(message: string): Promise<void> {
-        await sendChatMessage(message);
+        this.logger.info("User message received");
+        await this.contextManager.sendUserMessage(message);
     }
 
 }

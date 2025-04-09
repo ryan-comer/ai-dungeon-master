@@ -3,34 +3,34 @@ import { ILogger } from './interfaces/ILogger';
 class Logger implements ILogger {
     private eventListeners: { [event: string]: ((...args: any[]) => void)[] } = {};
 
-    log(message: string): void {
-        console.log(message);
-        this.emit('log', message);
+    log(message: string, ...optionalParams: any[]): void {
+        console.log(message, ...optionalParams);
+        this.emit('log', message, ...optionalParams);
     }
 
-    error(message: string): void {
-        console.error(message);
-        this.emit('error', message);
+    error(message: string, ...optionalParams: any[]): void {
+        console.error(message, ...optionalParams);
+        this.emit('error', message, ...optionalParams);
     }
 
-    warn(message: string): void {
-        console.warn(message);
-        this.emit('warn', message);
+    warn(message: string, ...optionalParams: any[]): void {
+        console.warn(message, ...optionalParams);
+        this.emit('warn', message, ...optionalParams);
     }
 
-    info(message: string): void {
-        console.info(message);
-        this.emit('info', message);
+    info(message: string, ...optionalParams: any[]): void {
+        console.info(message, ...optionalParams);
+        this.emit('info', message, ...optionalParams);
     }
 
-    debug(message: string): void {
-        console.debug(message);
-        this.emit('debug', message);
+    debug(message: string, ...optionalParams: any[]): void {
+        console.debug(message, ...optionalParams);
+        this.emit('debug', message, ...optionalParams);
     }
 
-    trace(message: string): void {
-        console.trace(message);
-        this.emit('trace', message);
+    trace(message: string, ...optionalParams: any[]): void {
+        console.trace(message, ...optionalParams);
+        this.emit('trace', message, ...optionalParams);
     }
 
     on(event: string, callback: (...args: any[]) => void): void {

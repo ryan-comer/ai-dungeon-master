@@ -13,12 +13,25 @@ class GoogleClient implements ITextGenerationClient {
         this.model = model;
     }
 
-    async generateText(prompt: string, optionsOverride?: any): Promise<string> {
-        const response = await this.genAI.models.generateContent({
+    async generateText(prompt: string, chatHistory?: string[], optionsOverride?: any): Promise<string> {
+        const history = chatHistory ? chatHistory.map((message, index) => {
+            return {
+                role: index % 2 === 0 ? "user" : "model",
+                parts: [{text: message}]
+            };
+        }) : [];
+
+        const chat = this.genAI.chats.create({
             model: this.model,
-            contents: prompt,
-            ...optionsOverride
+            history: history
         });
+
+        const response = await chat.sendMessage({
+            message: prompt,
+            config: {
+                ...optionsOverride
+            }
+        })
 
         if (response.text) {
             return response.text;

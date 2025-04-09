@@ -16,6 +16,7 @@ interface ICoreManager {
 
     loadCampaign(settingName: string, campaignName: string): Promise<Campaign | null>;
     getLoadedCampaign(): Promise<Campaign | null>;
+    startSession(): Promise<void>;
 
     userMessage(message: string): Promise<void>;
 

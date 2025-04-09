@@ -5,7 +5,8 @@ import { Campaign } from "../models/Campaign";
 
 interface IContextManager {
     loadContext(setting: Setting, campaign: Campaign): Promise<Context | null>;
-    startCampaign(): Promise<void>;
+    startSession(): Promise<void>;
+    sendUserMessage(message: string): Promise<void>;
 }
 
 export { IContextManager };

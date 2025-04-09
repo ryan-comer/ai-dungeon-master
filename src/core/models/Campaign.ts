@@ -53,7 +53,7 @@ class Campaign {
 const CampaignCodec = t.type({
     name: t.string,
     description: t.string,
-    setting: t.string,
+    setting: t.union([t.string, t.undefined]),
     objectives: t.array(t.string),
     overview: t.type({
         description: t.string,

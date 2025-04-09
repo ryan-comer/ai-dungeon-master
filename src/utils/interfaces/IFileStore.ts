@@ -7,7 +7,10 @@ import { Location } from "../../core/models/Location";
 import { Faction } from "../../core/models/Faction";
 
 interface IFileStore {
-    // Helper functions to get paths
+    getCharacters(settingName: string, campaignName: string): Promise<Character[]>;
+    getLocations(settingName: string, campaignName: string): Promise<Location[]>;
+    getFactions(settingName: string, campaignName: string): Promise<Faction[]>;
+
     getSetting(settingName: string): Promise<Setting | null>;
     getCampaign(settingName: string, campaignName: string): Promise<Campaign | null>;
     getStoryline(settingName: string, campaignName: string, storylineName: string): Promise<Storyline | null>;

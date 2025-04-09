@@ -100,6 +100,60 @@ class FoundryStore implements IFileStore {
         return content ? JSON.parse(content) as Faction : null;
     }
 
+    async getCharacters(settingName: string, campaignName: string): Promise<Character[]> {
+        settingName = this.stripInvalidFilenameChars(settingName);
+        campaignName = this.stripInvalidFilenameChars(campaignName);
+
+        const charactersPath: string = this.getCharactersPath(settingName, campaignName);
+        const characterDirectories: string[] = await this.getDirectories(charactersPath);
+
+        const characters: Character[] = [];
+        for (const characterName of characterDirectories) {
+            const character = await this.getCharacter(settingName, campaignName, characterName);
+            if (character) {
+                characters.push(character);
+            }
+        }
+
+        return characters;
+    }
+
+    async getLocations(settingName: string, campaignName: string): Promise<Location[]> {
+        settingName = this.stripInvalidFilenameChars(settingName);
+        campaignName = this.stripInvalidFilenameChars(campaignName);
+
+        const locationsPath: string = this.getLocationsPath(settingName, campaignName);
+        const locationDirectories: string[] = await this.getDirectories(locationsPath);
+
+        const locations: Location[] = [];
+        for (const locationName of locationDirectories) {
+            const location = await this.getLocation(settingName, campaignName, locationName);
+            if (location) {
+                locations.push(location);
+            }
+        }
+
+        return locations;
+    }
+
+    async getFactions(settingName: string, campaignName: string): Promise<Faction[]> {
+        settingName = this.stripInvalidFilenameChars(settingName);
+        campaignName = this.stripInvalidFilenameChars(campaignName);
+
+        const factionsPath: string = this.getFactionsPath(settingName, campaignName);
+        const factionDirectories: string[] = await this.getDirectories(factionsPath);
+
+        const factions: Faction[] = [];
+        for (const factionName of factionDirectories) {
+            const faction = await this.getFaction(settingName, campaignName, factionName);
+            if (faction) {
+                factions.push(faction);
+            }
+        }
+
+        return factions;
+    }
+
     async saveSetting(settingName: string, setting: Setting): Promise<void> {
         settingName = this.stripInvalidFilenameChars(settingName);
 

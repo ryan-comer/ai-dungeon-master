@@ -1,4 +1,4 @@
-import { IEntityManager } from "./interfaces/IEntitymanager";
+import { IEntityManager } from "./interfaces/IEntityManager";
 import { EntityType } from "./interfaces/ISemanticIndex";
 
 import { Character } from "./models/Character";
@@ -35,17 +35,11 @@ class EntityManager implements IEntityManager {
     semanticIndex: ISemanticIndex;
     fileStore: IFileStore;
 
-    setting: Setting;
-    campaign: Campaign;
-
-    constructor(setting: Setting, campaign: Campaign, textGenerationClient: ITextGenerationClient, imageGenerationClient: IImageGenerationClient, fileStore: IFileStore) {
+    constructor(textGenerationClient: ITextGenerationClient, imageGenerationClient: IImageGenerationClient, fileStore: IFileStore) {
         this.textGenerationClient = textGenerationClient;
         this.imageGenerationClient = imageGenerationClient;
 
-        this.setting = setting;
-        this.campaign = campaign;
-
-        this.semanticIndex = new SemanticIndex(setting, campaign, textGenerationClient, fileStore);
+        this.semanticIndex = new SemanticIndex(textGenerationClient, fileStore);
         this.fileStore = fileStore;
     }
 
@@ -79,6 +73,7 @@ class EntityManager implements IEntityManager {
 
         {
             "name": "Name of the character",
+            "description": "Description of the character",
             "campaignRole": "Role in the campaign",
             "alignment": "Alignment",
             "factions": [{   // Empty array if none
@@ -329,9 +324,9 @@ class EntityManager implements IEntityManager {
 
 
 
-    async createCharacter(userPrompt: string, storyline?: Storyline): Promise<Character> {
+    async createCharacter(userPrompt: string, setting: Setting, campaign: Campaign, storyline?: Storyline): Promise<Character> {
         // Create a new character
-        const prompt: string = this.getCharacterPrompt(userPrompt, this.setting, this.campaign, storyline)
+        const prompt: string = this.getCharacterPrompt(userPrompt, setting, campaign, storyline)
         const newCharacter: string = await RepeatJsonGeneration(prompt, async (repeatPrompt: string): Promise<string> => {
             const repeatResponse: string = await this.textGenerationClient.generateText(repeatPrompt);
             return repeatResponse;
@@ -354,7 +349,7 @@ class EntityManager implements IEntityManager {
         });
 
         // Add the character to the semantic index
-        await this.semanticIndex.addEntity(EntityType.Character, character.name, JSON.stringify(JSON.parse(context), null, '\t'), newCharacter);
+        await this.semanticIndex.addEntity(EntityType.Character, character.name, JSON.stringify(JSON.parse(context), null, '\t'), newCharacter, setting, campaign);
 
         // Get the prompt for the character portrait
         const portraitPrompt: string = await this.textGenerationClient.generateText(`
@@ -363,8 +358,8 @@ class EntityManager implements IEntityManager {
             I will give you the character JSON as well as JSON for the setting and the campaign and you will use it to create the prompt.
             Make sure the prompt is descriptive enough to capture the essence of the character.
 
-            Here is the setting JSON: ${JSON.stringify(this.setting)}
-            Here is the campaign JSON: ${JSON.stringify(this.campaign)}
+            Here is the setting JSON: ${JSON.stringify(setting)}
+            Here is the campaign JSON: ${JSON.stringify(campaign)}
             ${storyline ? "Here is the storyline JSON: " + JSON.stringify(storyline) : ""}
 
             Here is the character JSON for the character I want you to create a portrait for:
@@ -377,13 +372,13 @@ class EntityManager implements IEntityManager {
         const imageData: string = await this.imageGenerationClient.generateImage(portraitPrompt);
         //await this.imageGenerationClient.unloadModel();
 
-        await this.fileStore.saveCharacterImage(this.setting.name, this.campaign.name, character.name, "portrait.png", imageData);
+        await this.fileStore.saveCharacterImage(setting.name, campaign.name, character.name, "portrait.png", imageData);
         return character;
     }
 
-    async createLocation(userPrompt: string, storyline?: Storyline): Promise<Location> {
+    async createLocation(userPrompt: string, setting: Setting, campaign: Campaign, storyline?: Storyline): Promise<Location> {
         // Create a new location
-        const prompt: string = this.getLocationPrompt(userPrompt, this.setting, this.campaign, storyline)
+        const prompt: string = this.getLocationPrompt(userPrompt, setting, campaign, storyline)
         const newLocation: string = await RepeatJsonGeneration(prompt, async (repeatPrompt: string): Promise<string> => {
             const repeatResponse: string = await this.textGenerationClient.generateText(repeatPrompt);
             return repeatResponse;
@@ -407,7 +402,7 @@ class EntityManager implements IEntityManager {
         });
 
         // Add the character to the semantic index
-        await this.semanticIndex.addEntity(EntityType.Location, location.name, context, newLocation);
+        await this.semanticIndex.addEntity(EntityType.Location, location.name, context, newLocation, setting, campaign);
 
         // Get the prompt for the location image
         const imagePrompt: string = await this.textGenerationClient.generateText(`
@@ -417,8 +412,8 @@ class EntityManager implements IEntityManager {
             I will give you the location JSON as well as JSON for the setting and the campaign and you will use it to create the prompt.
             Make sure the prompt is descriptive enough to capture the essence of the location.
 
-            Here is the setting JSON: ${JSON.stringify(this.setting)}
-            Here is the campaign JSON: ${JSON.stringify(this.campaign)}
+            Here is the setting JSON: ${JSON.stringify(setting)}
+            Here is the campaign JSON: ${JSON.stringify(campaign)}
             ${storyline ? "Here is the storyline JSON: " + JSON.stringify(storyline) : ""}
 
             Here is the location JSON for the character I want you to create an image for:
@@ -431,14 +426,14 @@ class EntityManager implements IEntityManager {
         const imageData: string = await this.imageGenerationClient.generateImage(imagePrompt);
         //await this.imageGenerationClient.unloadModel();
 
-        await this.fileStore.saveLocationImage(this.setting.name, this.campaign.name, location.name, "background.png", imageData);
+        await this.fileStore.saveLocationImage(setting.name, campaign.name, location.name, "background.png", imageData);
 
         return location;
     }
 
-    async createFaction(userPrompt: string, storyline?: Storyline): Promise<Faction> {
+    async createFaction(userPrompt: string, setting: Setting, campaign: Campaign, storyline?: Storyline): Promise<Faction> {
         // Create a new faction
-        const prompt: string = this.getFactionPrompt(userPrompt, this.setting, this.campaign, storyline)
+        const prompt: string = this.getFactionPrompt(userPrompt, setting, campaign, storyline)
         const newFaction: string = await RepeatJsonGeneration(prompt, async (repeatPrompt: string): Promise<string> => {
             const repeatResponse: string = await this.textGenerationClient.generateText(repeatPrompt);
             return repeatResponse;
@@ -462,7 +457,7 @@ class EntityManager implements IEntityManager {
         });
 
         // Add the faction to the semantic index
-        await this.semanticIndex.addEntity(EntityType.Faction, faction.name, context, newFaction);
+        await this.semanticIndex.addEntity(EntityType.Faction, faction.name, context, newFaction, setting, campaign);
 
         // Get the prompt for the faction image
         const imagePrompt: string = await this.textGenerationClient.generateText(`
@@ -484,22 +479,52 @@ class EntityManager implements IEntityManager {
         const imageData: string = await this.imageGenerationClient.generateImage(imagePrompt);
         //await this.imageGenerationClient.unloadModel();
 
-        await this.fileStore.saveFactionImage(this.setting.name, this.campaign.name, faction.name, "emblem.png", imageData);
+        await this.fileStore.saveFactionImage(setting.name, campaign.name, faction.name, "emblem.png", imageData);
 
         return faction;
     }
 
-    async getCharacter(context: string): Promise<Character | null> {
-        const character:  Character | null = await this.semanticIndex.getEntity(EntityType.Character, context);
+    async getCharacterFromContext(context: string, setting: Setting, campaign: Campaign): Promise<Character | null> {
+        const character:  Character | null = await this.semanticIndex.getEntity(EntityType.Character, context, setting, campaign);
         return character;
     }
-    async getLocation(context: string): Promise<Location | null> {
-        const location: Location | null = await this.semanticIndex.getEntity(EntityType.Location, context);
+    async getLocationFromContext(context: string, setting: Setting, campaign: Campaign): Promise<Location | null> {
+        const location: Location | null = await this.semanticIndex.getEntity(EntityType.Location, context, setting, campaign);
         return location;
     }
-    async getFaction(context: string): Promise<Faction | null> {
-        const faction: Faction | null = await this.semanticIndex.getEntity(EntityType.Faction, context);
+    async getFactionFromContext(context: string, setting: Setting, campaign: Campaign): Promise<Faction | null> {
+        const faction: Faction | null = await this.semanticIndex.getEntity(EntityType.Faction, context, setting, campaign);
         return faction;
+    }
+
+    async getCharacter(name: string, setting: Setting, campaign: Campaign): Promise<Character | null> {
+        const character: Character | null = await this.fileStore.getCharacter(setting.name, campaign.name, name);
+        return character;
+    }
+
+    async getLocation(name: string, setting: Setting, campaign: Campaign): Promise<Location | null> {
+        const location: Location | null = await this.fileStore.getLocation(setting.name, campaign.name, name);
+        return location;
+    }
+
+    async getFaction(name: string, setting: Setting, campaign: Campaign): Promise<Faction | null> {
+        const faction: Faction | null = await this.fileStore.getFaction(setting.name, campaign.name, name);
+        return faction;
+    }
+
+    async getCharacters(setting: Setting, campaign: Campaign): Promise<Character[]> {
+        const characters: Character[] = await this.fileStore.getCharacters(setting.name, campaign.name);
+        return characters;
+    }
+
+    async getLocations(setting: Setting, campaign: Campaign): Promise<Location[]> {
+        const locations: Location[] = await this.fileStore.getLocations(setting.name, campaign.name);
+        return locations;
+    }
+
+    async getFactions(setting: Setting, campaign: Campaign): Promise<Faction[]> {
+        const factions: Faction[] = await this.fileStore.getFactions(setting.name, campaign.name);
+        return factions;
     }
 }
 

@@ -3,6 +3,7 @@ import * as t from 'io-ts';
 // Model class for a character in a campaign
 class Character {
     name: string;
+    description: string;
     campaignRole: string;
     alignment: string;
     factions: {
@@ -65,6 +66,7 @@ class Character {
 
     constructor() {
         this.name = '';
+        this.description = '';
         this.campaignRole = '';
         this.alignment = '';
         this.factions = [];
@@ -114,6 +116,7 @@ class Character {
 
 const CharacterCodec = t.type({
     name: t.string,
+    description: t.string,
     campaignRole: t.string,
     alignment: t.string,
     factions: t.array(

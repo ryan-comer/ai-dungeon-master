@@ -1,6 +1,9 @@
+import { Setting } from "../models/Setting";
+import { Campaign } from "../models/Campaign";
+
 interface ISemanticIndex {
-    getEntity(entityType: EntityType, context: string): Promise<any | null>;
-    addEntity(entityType: EntityType, name: string, context: string, jsonData: string): Promise<any>;
+    getEntity(entityType: EntityType, context: string, setting: Setting, campaign: Campaign): Promise<any | null>;
+    addEntity(entityType: EntityType, name: string, context: string, jsonData: string, setting: Setting, campaign: Campaign): Promise<any>;
 }
 
 // Enum for the different types of entities

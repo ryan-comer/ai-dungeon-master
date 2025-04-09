@@ -3,14 +3,13 @@ import {
 } from './campaign-window.js';
 import { getCoreManager } from "./core-manager-instance.js";
 
-function campaignLoaded(campaign) {
-
-}
-
 export function initializeMainWindow() {
+    const coreManager = getCoreManager();
+
     // Wait for the DOM to be fully loaded
     const chatControls = document.getElementById('chat-controls');
     if (chatControls) {
+
         const templatePath = 'modules/ai-dungeon-master/templates/main-window.html';
         fetch(templatePath)
             .then(response => response.text())
@@ -24,8 +23,6 @@ export function initializeMainWindow() {
             })
             .then(() => {
                 document.getElementById('ai-dm-submit-prompt').addEventListener('click', () => {
-                    const coreManager = getCoreManager();
-
                     const prompt = document.getElementById('ai-dm-prompt').value;
 
                     coreManager.userMessage(prompt);
@@ -35,6 +32,25 @@ export function initializeMainWindow() {
                     const campaignWindow = new CampaignWindow();
                     campaignWindow.render(true);
                 });
+
+                // Subscribe to logger events
+                const statusMessageElement = document.getElementById('ai-dm-status-message');
+                if (statusMessageElement) {
+                    coreManager.logger.on('log', (message) => {
+                        statusMessageElement.textContent = `Log: ${message}`;
+                    });
+
+                    coreManager.logger.on('info', (message) => {
+                        statusMessageElement.textContent = `Info: ${message}`;
+                    });
+
+                    coreManager.logger.on('error', (error) => {
+                        statusMessageElement.textContent = `Error: ${error}`;
+                        console.error("Error in AI Dungeon Master:", error);
+                    });
+                } else {
+                    console.error("Status message element not found.");
+                }
             })
             .catch(error => console.error(`Failed to load template: ${templatePath}`, error));
     } else {

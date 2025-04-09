@@ -17,17 +17,18 @@ export class CampaignWindow extends Application {
     constructor(options = {}) {
         super(options);
         this.coreManager = getCoreManager();
+        this.logger = this.coreManager.Logger();
     }
 
     static get defaultOptions() {
-        return mergeObject(super.defaultOptions, {
+        return Object.assign(super.defaultOptions, {
             id: "campaign-window",
             title: "Campaign Settings",
             template: "modules/ai-dungeon-master/templates/campaign-window.html",
             width: 400,
             height: "auto",
             resizable: true
-        })
+        });
     }
 
     activateListeners(html) {
@@ -41,10 +42,12 @@ export class CampaignWindow extends Application {
         this.createSettingButton = html.find('#create-setting-btn');
         this.createCampaignButton = html.find('#create-campaign-btn');
         this.loadCampaignButton = html.find('#load-campaign-btn');
+        this.startSessionButton = html.find('#start-session-btn');
 
         this.createSettingButton.click(this._onCreateSetting.bind(this));
         this.createCampaignButton.click(this._onCreateCampaign.bind(this));
         this.loadCampaignButton.click(this._onLoadCampaign.bind(this));
+        this.startSessionButton.click(this._onStartSession.bind(this));
 
         // Add change listener to settings list
         this.settingsList.change(this._onSettingChange.bind(this));
@@ -52,6 +55,17 @@ export class CampaignWindow extends Application {
         // Refesh settings and campaigns on load
         this.refreshSettings().then(() => {
             this.refreshCampaigns();
+        });
+
+        // Check if there's a loaded campaign
+        this.coreManager.getLoadedCampaign().then(loadedCampaign => {
+            console.log("Loaded campaign:", loadedCampaign);
+            if (loadedCampaign) {
+                document.getElementById('campaign-loaded').textContent = loadedCampaign.name;
+                document.getElementById('start-session-btn').classList.remove('hidden');
+            } else {
+                document.getElementById('start-session-btn').classList.add('hidden');
+            }
         });
     }
 
@@ -128,15 +142,17 @@ export class CampaignWindow extends Application {
             this._setLoadingState(true, "Loading campaign...");
             const campaign = await this.coreManager.loadCampaign(selectedSetting, selectedCampaign);
             document.getElementById('campaign-loaded').textContent = campaign.name;
-            document.getElementById('campaign-loaded').classList.remove('hidden');
+            document.getElementById('start-session-btn').classList.remove('hidden');
+
             ui.notifications.info(`Campaign "${campaign.name}" loaded successfully.`);
         } finally {
             this._setLoadingState(false, "Idle");
         }
     }
 
-    _onSettingChange(event) {
+    async _onSettingChange(event) {
         this.checkEnableCampaigns();
+        await this.refreshCampaigns();
     }
 
     checkEnableCampaigns() {
@@ -192,6 +208,10 @@ export class CampaignWindow extends Application {
         if (campaigns.length > 0) {
             this.loadCampaignButton.prop('disabled', false);
         }
+    }
+
+    async _onStartSession() {
+        await this.coreManager.startSession();
     }
 
     _setLoadingState(isLoading, status) {

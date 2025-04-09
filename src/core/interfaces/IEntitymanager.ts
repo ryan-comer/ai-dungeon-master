@@ -2,15 +2,26 @@ import { Character } from "../models/Character";
 import { Location } from "../models/Location";
 import { Faction } from "../models/Faction";
 import { Storyline } from "../models/Storyline";
+import { Campaign } from "../models/Campaign";
+import { Setting } from "../models/Setting";
 
 interface IEntityManager {
-    createCharacter(userPrompt: string, storyline?: Storyline): Promise<Character>;
-    createLocation(userPrompt: string, storyline?: Storyline): Promise<Location>;
-    createFaction(userPrompt: string, storyline?: Storyline): Promise<Faction>;
+    createCharacter(userPrompt: string, setting: Setting, campaign: Campaign, storyline?: Storyline): Promise<Character>;
+    createLocation(userPrompt: string, setting: Setting, campaign: Campaign, storyline?: Storyline): Promise<Location>;
+    createFaction(userPrompt: string, setting: Setting, campaign: Campaign, storyline?: Storyline): Promise<Faction>;
 
-    getCharacter(context: string): Promise<Character|null>;
-    getLocation(context: string): Promise<Location|null>;
-    getFaction(context: string): Promise<Faction|null>;
+    getCharacters(setting: Setting, campaign: Campaign): Promise<Character[]>;
+    getLocations(setting: Setting, campaign: Campaign): Promise<Location[]>;
+    getFactions(setting: Setting, campaign: Campaign): Promise<Faction[]>;
+
+    getCharacter(name: string, setting: Setting, campaign: Campaign): Promise<Character|null>;
+    getLocation(name: string, setting: Setting, campaign: Campaign): Promise<Location|null>;
+    getFaction(name: string, setting: Setting, campaign: Campaign): Promise<Faction|null>;
+
+    getCharacterFromContext(context: string, setting: Setting, campaign: Campaign): Promise<Character|null>;
+    getLocationFromContext(context: string, setting: Setting, campaign: Campaign): Promise<Location|null>;
+    getFactionFromContext(context: string, setting: Setting, campaign: Campaign): Promise<Faction|null>;
+
 }
 
 export { IEntityManager };
