@@ -37,7 +37,7 @@ class ForgeClient implements IImageGenerationClient {
         this.url = url;
     }
     
-    async generateImage(prompt: string): Promise<string> {
+    async generateImage(prompt: string, optionsOverride?: any): Promise<string> {
         try {
             const request:TextToImageRequest = {
                 prompt: prompt,
@@ -48,7 +48,8 @@ class ForgeClient implements IImageGenerationClient {
                 cfg_scale: 1.0,
                 sampler_name: "Euler",
                 scheduler: "Simple",
-                distilled_cfg_scale: 3.5
+                distilled_cfg_scale: 3.5,
+                ...optionsOverride
             };
 
             const response = await fetch(`${this.url}/sdapi/v1/txt2img`, {
@@ -64,6 +65,29 @@ class ForgeClient implements IImageGenerationClient {
         } catch(e) {
             console.error(e);
             return "";
+        }
+    }
+
+    async removeBackground(base64Image: string): Promise<string> {
+        try {
+            const response = await fetch(`${this.url}/rembg`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    input_image: base64Image,
+                    model: "isnet-general-use",
+                    return_mask: false,
+                    alpha_matting: false
+                }),
+            });
+
+            const data = await response.json();
+            return data.image;
+        } catch(e) {
+            console.error(e);
+            return base64Image;
         }
     }
 

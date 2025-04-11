@@ -273,7 +273,7 @@ class FileSystemStore implements IFileStore {
         fs.writeFileSync(filePath, fileContent, "utf8");
     }
 
-    saveImage(filePath: string, base64Image: string) {
+    async saveImage(filePath: string, base64Image: string) {
         const buffer: Buffer = Buffer.from(base64Image, "base64");
         fs.writeFileSync(filePath, buffer);
     }
@@ -318,6 +318,10 @@ class FileSystemStore implements IFileStore {
         }[entityType];
 
         return basePath
+    }
+
+    getBasePath(): string {
+        return this.basePath;
     }
 }
 

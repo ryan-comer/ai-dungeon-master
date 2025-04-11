@@ -374,10 +374,30 @@ class FoundryStore implements IFileStore {
     }
 
     async saveImage(filePath: string, base64Image: string): Promise<void> {
-        console.log("Saving image: ", filePath);
+        const folderPath = filePath.substring(0, filePath.lastIndexOf('/'));
+        const folderPaths = folderPath.split('/');
+        const fileName = filePath.substring(filePath.lastIndexOf('/') + 1);
+
+        // Create the directory structure if it doesn't exist
+        let currentPath: any = '';
+        for (const part of folderPaths) {
+            currentPath += `${part}/`;
+            try {
+            // Check if the directory exists by attempting to browse it
+                await FilePicker.browse('data', currentPath);
+            } catch (error) {
+                // If browsing fails, the directory doesn't exist; attempt to create it
+                try {
+                    await FilePicker.createDirectory('data', currentPath);
+                    console.log(`Directory created: ${currentPath}`);
+                } catch (createError) {
+                    console.error(`Failed to create directory: ${currentPath}`, createError);
+                    throw createError; // Stop the process if directory creation fails
+                }
+            }
+        }
 
         const blob = this.base64ToBlob(base64Image, 'image/png');
-        const fileName = filePath.substring(filePath.lastIndexOf('/') + 1);
         const file = new File([blob], fileName, { type: 'image/png' });
 
         await FilePicker.upload('data', filePath.substring(0, filePath.lastIndexOf('/')), file, {});

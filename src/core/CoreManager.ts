@@ -21,6 +21,9 @@ import { Storyline } from "./models/Storyline";
 import { Mutex } from "async-mutex"; // Add this import for the lock mechanism
 import { EventEmitter } from "events"; // Add this import for event handling
 
+import { ITool } from "../tools/interfaces/ITool";
+import { CreateEncounterTool } from "../tools/CreateEncounterTool";
+
 class CoreManager implements ICoreManager {
     private campaignManager: ICampaignManager;
     private contextManager: IContextManager
@@ -33,12 +36,16 @@ class CoreManager implements ICoreManager {
     private loadedSetting: Setting | null = null; // Store the loaded setting
     private loadedStoryline: Storyline | null = null; // Store the loaded storyline
 
-    constructor(iTextGenerationClient: ITextGenerationClient, iImageGenerationClient: IImageGenerationClient, fileStore: IFileStore, logger: ILogger=new Logger()) {
-        this.entityManager = new EntityManager(iTextGenerationClient, iImageGenerationClient, fileStore);
-        this.campaignManager = new CampaignManager(iTextGenerationClient, iImageGenerationClient, fileStore, this.entityManager, logger);
+    private tools: ITool[] = [
+        new CreateEncounterTool(), // Add your tools here
+    ];
+
+    constructor(textGenerationClient: ITextGenerationClient, imageGenerationClient: IImageGenerationClient, fileStore: IFileStore, logger: ILogger=new Logger()) {
+        this.entityManager = new EntityManager(textGenerationClient, imageGenerationClient, fileStore);
+        this.campaignManager = new CampaignManager(textGenerationClient, imageGenerationClient, fileStore, this.entityManager, logger);
         this.logger = logger;
         this.creationLock = new Mutex(); // Initialize the Mutex
-        this.contextManager = new ContextManager(iTextGenerationClient, fileStore, this.entityManager, logger); // Initialize the context manager
+        this.contextManager = new ContextManager(textGenerationClient, imageGenerationClient, fileStore, this.entityManager, logger, this.tools); // Initialize the context manager
         this.eventEmitter = new EventEmitter(); // Initialize the EventEmitter
     }
 
