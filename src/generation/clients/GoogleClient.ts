@@ -13,11 +13,11 @@ class GoogleClient implements ITextGenerationClient {
         this.model = model;
     }
 
-    async generateText(prompt: string, chatHistory?: string[], optionsOverride?: any): Promise<string> {
+    async generateText(prompt: string, chatHistory?: string[], optionsOverride?: any, image?: string): Promise<string> {
         const history = chatHistory ? chatHistory.map((message, index) => {
             return {
                 role: index % 2 === 0 ? "user" : "model",
-                parts: [{text: message}]
+                parts: [{ text: message }]
             };
         }) : [];
 
@@ -26,18 +26,34 @@ class GoogleClient implements ITextGenerationClient {
             history: history
         });
 
+        const message: any = {
+            role: "user",
+            parts: [{ text: prompt }]
+        };
+
+        if (image) {
+            message.parts.push({
+                inlineData: {
+                    data: image,
+                    mimeType: 'image/png'
+                }
+            });
+        }
+
         const response = await chat.sendMessage({
-            message: prompt,
+            message: message,
             config: {
                 ...optionsOverride
             }
-        })
+        });
 
-        if (response.text) {
-            return response.text;
-        } else {
-            throw new Error("No text generated");
+        if (!response.candidates || response.candidates.length === 0 || !response.candidates[0].content 
+            || !response.candidates[0].content.parts || response.candidates[0].content.parts.length === 0 
+            || !response.candidates[0].content.parts[0].text) {
+            throw new Error(`Error generating text`);
         }
+
+        return response.candidates[0].content.parts[0].text;
     }
 
     async unloadModel(): Promise<void> {

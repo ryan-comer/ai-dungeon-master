@@ -42,7 +42,6 @@ const EntityCodec = t.type({
     description: t.string,
     tokenPrompt: t.string,
     count: t.number,
-    class: t.string,
     level: t.number,
     alignment: t.string,
     abilities: AbilityScoresCodec,
@@ -61,6 +60,7 @@ const EncounterCodec = t.type({
     name: t.string,
     description: t.string,
     battlemapPrompt: t.string,
+    backgroundImageDimension: t.union([t.literal("square"), t.literal("portrait"), t.literal("landscape")]),
     entities: t.array(EntityCodec),
 });
 
@@ -97,7 +97,6 @@ class Entity {
         public description: string,
         public tokenPrompt: string,
         public count: number,
-        public classType: string,
         public level: number,
         public alignment: string,
         public abilities: AbilityScores,
@@ -118,6 +117,7 @@ class Encounter {
         public name: string,
         public description: string,
         public battlemapPrompt: string,
+        public backgroundImageDimension: string,
         public entities: Entity[]
     ) {}
 }

@@ -37,20 +37,69 @@ class CreateEncounterTool implements ITool {
         console.log("Encounter created:", encounter);
 
         // Create the scene for the encounter
+        const backgroundWidth: number = {
+            'square': 1024,
+            'portrait': 768,
+            'landscape': 1360
+        }[encounter.backgroundImageDimension] || 1024;
+        const backgroundHeight: number = {
+            'square': 1024,
+            'portrait': 1360,
+            'landscape': 768
+        }[encounter.backgroundImageDimension] || 1024;
         const baseEncounterPath: string = `${contextManager.fileStore.getBasePath()}/encounters/${stripInvalidFilenameChars(encounter.name)}`;
-        await this.createEncounterScene(encounter, contextManager, baseEncounterPath);
+        const backgroundImage: string = await this.createEncounterScene(encounter, contextManager, baseEncounterPath, backgroundWidth, backgroundHeight);
 
         // Create the different entities in the encounter
-        await this.createEncounterEntities(encounter, contextManager, baseEncounterPath);
+        const actors: Actor[] = await this.createEncounterEntities(encounter, contextManager, baseEncounterPath);
+
+        // Create the tokens for the entities in the encounter
+        await this.createEntityTokens(encounter, contextManager, backgroundImage, backgroundWidth, backgroundHeight, actors);
 
         contextManager.logger.info("Encounter created successfully:", encounter.name);
     }
 
+    // Create tokens for the entities in the encounter and place them on the map
+    async createEntityTokens(encounter: Encounter, contextManager: IContextManager, backgroundImage: string, 
+        backgroundWidth: number, backgroundHeight: number, actors: Actor[]): Promise<void> {
+        const prompt: string = this.getEntityPlacementPrompt(encounter);
+
+        const response = await RepeatJsonGeneration(prompt, (repeatPrompt: string) => {
+            return contextManager.textGenerationClient.generateText(repeatPrompt, [], null, backgroundImage);
+        }, (response: string) => {
+            try{
+                const responseJson: any = JSON.parse(response);
+
+                return responseJson.tokens && Array.isArray(responseJson.tokens) && responseJson.tokens.length > 0 && responseJson.tokens.every((token: any) => {
+                    return token.name && typeof token.x === "number" && typeof token.y === "number";
+                });     
+            } catch (error) {
+                return false;
+            }
+        });
+
+        const responseJson: any = JSON.parse(response);
+        for (const token of responseJson.tokens) {
+            const actor: Actor | undefined = actors.find((actor) => actor.name === token.name);
+            if (actor) {
+                // Calculate the x and y coordinates based on the background image size
+                const x: number = Math.round(token.x * backgroundWidth);
+                const y: number = Math.round(token.y * backgroundHeight);
+                const tokenData: any = await actor.getTokenDocument({ x, y });
+                await canvas?.scene?.createEmbeddedDocuments("Token", [tokenData]);
+            } else {
+                console.warn(`Actor not found for token: ${token.name}`);
+            }
+        }
+    }
+
     // Create an entity for the encounter in FoundryVTT
-    async createEncounterEntities(encounter: Encounter, contextManager: IContextManager, baseEncounterPath: string): Promise<void> {
+    async createEncounterEntities(encounter: Encounter, contextManager: IContextManager, baseEncounterPath: string): Promise<Actor[]> {
+        const newActors: Actor[] = [];
+
         for (const entity of encounter.entities) {
             // Generate the image
-            const newPrompt: string = `A dnd character portrait of ${entity.tokenPrompt}, solid white background`;
+            const newPrompt: string = `DnD character token art of ${entity.tokenPrompt}, full body shot, solid white background`;
             const imageData = await contextManager.imageGenerationClient.generateImage(newPrompt, {
                 width: 1024,
                 height: 1024
@@ -133,16 +182,18 @@ class CreateEncounterTool implements ITool {
             // Add the weapons
             for (const weapon of entity.weapons) {
                 // Generate the image for the weapon
+                /*
                 const imageData = await contextManager.imageGenerationClient.generateImage(weapon.imagePrompt, {
                     width: 1024,
                     height: 1024
                 });
                 const imagePath: string = `${baseEncounterPath}/${stripInvalidFilenameChars(entity.name)}/${stripInvalidFilenameChars(weapon.name)}.png`;
                 await contextManager.fileStore.saveImage(imagePath, imageData);
+                */
 
                 const weaponData: any = {
                     name: weapon.name,
-                    img: imagePath,
+                    //img: imagePath,
                     type: "weapon",
                     system: {
                         description: {
@@ -156,16 +207,18 @@ class CreateEncounterTool implements ITool {
             // Add the equipment
             for (const equipment of entity.equipment) {
                 // Generate the image for the weapon
+                /*
                 const imageData = await contextManager.imageGenerationClient.generateImage(equipment.imagePrompt, {
                     width: 1024,
                     height: 1024
                 });
                 const imagePath: string = `${baseEncounterPath}/${stripInvalidFilenameChars(entity.name)}/${stripInvalidFilenameChars(equipment.name)}.png`;
                 await contextManager.fileStore.saveImage(imagePath, imageData);
+                */
 
                 const equipmentData: any = {
                     name: equipment.name,
-                    img: imagePath,
+                    //img: imagePath,
                     type: "equipment",
                     system: {
                         description: {
@@ -179,15 +232,17 @@ class CreateEncounterTool implements ITool {
             // Add the spells
             for (const spell of entity.spells) {
                 // Generate the image for the spell
+                /*
                 const imageData = await contextManager.imageGenerationClient.generateImage(spell.imagePrompt, {
                     width: 1024,
                     height: 1024
                 });
                 const imagePath: string = `${baseEncounterPath}/${stripInvalidFilenameChars(entity.name)}/${stripInvalidFilenameChars(spell.name)}.png`;
                 await contextManager.fileStore.saveImage(imagePath, imageData);
+                */
                 const spellData: any = {
                     name: spell.name,
-                    img: imagePath,
+                    //img: imagePath,
                     type: "spell",
                     system: {
                         description: {
@@ -201,15 +256,17 @@ class CreateEncounterTool implements ITool {
             // Add the feats
             for (const feature of entity.features) {
                 // Generate the image for the feature
+                /*
                 const imageData = await contextManager.imageGenerationClient.generateImage(feature.imagePrompt, {
                     width: 1024,
                     height: 1024
                 });
                 const imagePath: string = `${baseEncounterPath}/${stripInvalidFilenameChars(entity.name)}/${stripInvalidFilenameChars(feature.name)}.png`;
                 await contextManager.fileStore.saveImage(imagePath, imageData);
+                */
                 const featureData: any = {
                     name: feature.name,
-                    img: imagePath,
+                    //img: imagePath,
                     type: "feat",
                     system: {
                         description: {
@@ -219,16 +276,20 @@ class CreateEncounterTool implements ITool {
                 };
                 await newActor.createEmbeddedDocuments("Item", [featureData]);
             }
+
+            newActors.push(newActor);
         }
+        
+        return newActors;
     }
 
 
     // Create a scene for the encounter in FoundryVTT
-    async createEncounterScene(encounter: Encounter, contextManager: IContextManager, baseEncounterPath: string): Promise<void> {
-        const newPrompt: string = `A DnD battlemap of ${encounter.battlemapPrompt}, top down, 2D, the point of view is straight down from above.`;
+    async createEncounterScene(encounter: Encounter, contextManager: IContextManager, baseEncounterPath: string, backgroundWidth: number, backgroundHeight: number): Promise<string> {
+        const newPrompt: string = `A 2D DnD battlemap with a top-down viewpoint that has the following description: ${encounter.battlemapPrompt} Point of view is high up looking straight down like you're looking at a battlemap in a tabletop rpg game. Do not make any other point of view other than top-down birds-eye point of view.`;
         const imageData = await contextManager.imageGenerationClient.generateImage(newPrompt, {
-            width: 1920,
-            height: 1080
+            width: backgroundWidth,
+            height: backgroundHeight
         });
         const imagePath: string = `${baseEncounterPath}/battlemap.png`;
         await contextManager.fileStore.saveImage(imagePath, imageData);
@@ -236,8 +297,8 @@ class CreateEncounterTool implements ITool {
         const newScene: any = await Scene.create({
             name: encounter.name,
             active: true,
-            width: 1920,
-            height: 1080,
+            width: backgroundWidth,
+            height: backgroundHeight,
             padding: 0,
             background: {
                 src: imagePath
@@ -250,6 +311,8 @@ class CreateEncounterTool implements ITool {
 
         await newScene.activate();
         await (newScene as Scene).createThumbnail();
+
+        return imageData;
     }
 
     getEncounterPrompt(context: string): string {
@@ -257,6 +320,8 @@ class CreateEncounterTool implements ITool {
         I want you to create an encounter for my players using the DND 5E rules.
         I will give you the context the players are in, and you will create an encounter for them.
         The encounter should be balanced and challenging for the players based on their level and abilities.
+        Give the entities enough weapons, equipment, spells, and features so that they can perform well in the encounter, but make sure they make sense to have
+        In the effects for the items, make sure to say if they are a bonus action, reaction, or action to use.
         This should follow something like the CR (Challenge Rating) system.
         The encounter should be scaled appropriately for the player.
         It is possible that the encounter will be too easy or too hard for the players, that is all based on the context.
@@ -271,13 +336,13 @@ class CreateEncounterTool implements ITool {
             "name": "Name of the encounter",
             "description": "Description of the encounter",
             "battlemapPrompt": "Prompt for an image generator to create a battlemap for the encounter. This should be a detailed prompt that has a lot of information about the scene of the encounter. Don't include the characters themselves, just the scene that they're fighting in. The more detail the better.",
+            "backgroundImageDimension": "square|portrait|landscape", // The dimension of the background image (string). Must be one of those options. Choose the option that best fits the encounter based on the context.
             "entities": [
                 {
                 "name": "Name of the entity",
                 "description": "Description of the entity",
                 "tokenPrompt": "Prompt for an image generator to create a token for the entity. This should be a detailed prompt that has a lot of information about the entity. This should include all of the physical characteristics of the entity. This information will be used to create the token for the character. The more detail the better.",
                 "count": 1, // Number of entities in the encounter (number)
-                "class": "The class of the entity",
                 "level": 1, // Level of the entity (number)
                 "alignment": "The alignment of the entity",
                 "abilities": {
@@ -324,7 +389,7 @@ class CreateEncounterTool implements ITool {
                     "imagePrompt": "Prompt for an image generator to create an image of the feature. This should be a detailed prompt that has a lot of information about the feature. The more detail the better."
                     }
                 ],
-                "cr": 1,    // Challenge rating of the entity (number)
+                "cr": 1.0 // Challenge rating of the entity (floating point number, e.g. 1.0, 2.5, etc), this is standard for DnD and is used to determine the difficulty of the encounter
                 "size": "SIZE_OF_CHARACTER",    // ["tiny", "sm", "med", "lg", "huge", "grg"]
                 }
             ]
@@ -332,6 +397,38 @@ class CreateEncounterTool implements ITool {
 
             Only reply with the JSON response. Do not add anything else to the response.
             Make sure the JSON is valid and follows the format above.
+        `
+    }
+
+    getEntityPlacementPrompt(encounter: Encounter): string {
+        return `
+        I am going to give you a battlemap image of an encounter for DnD.
+        I am also going to give you JSON that describes the encounter.
+        This JSON includes the entities that are in the encounter.
+        I want you to tell me where on the map the entities should be placed.
+        Each entity has a 'count' property that tells you how many of that entity there are.
+        Make sure to use that count property to determine how many of that entity there are on the map.
+        I want you to give me a list of the entities and their positions on the map.
+        Their position should be in the format of x and y coordinates that range from 0.0 to 1.0.
+        0.0 is the top left of the map, and 1.0 is the bottom right of the map.
+        The x coordinate is the left to right position, and the y coordinate is the top to bottom position.
+
+        The encounter JSON is:
+        ${JSON.stringify(encounter)}
+
+        I want you to give me a JSON response that looks like this:
+        {
+            tokens: [
+                {
+                    "name": "Name of the entity",
+                    "x": 0.55, // X coordinate (number between 0.0 and 1.0)
+                    "y": 0.55, // Y coordinate (number between 0.0 and 1.0)
+                },
+                ...
+            ]
+        }
+
+        Only reply with the JSON response. Do not add anything else to the response.
         `
     }
 }
