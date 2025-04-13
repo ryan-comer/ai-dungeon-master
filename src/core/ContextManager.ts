@@ -7,6 +7,7 @@ import { Storyline } from "./models/Storyline";
 import { Character } from "./models/Character";
 import { Location } from "./models/Location";
 import { Faction } from "./models/Faction";
+import { ChatData } from "./interfaces/ICoreManager";
 
 import { ILogger } from "../utils/interfaces/ILogger";
 import { IFileStore } from "../utils/interfaces/IFileStore";
@@ -15,6 +16,13 @@ import { ITextGenerationClient } from "../generation/clients/interfaces/ITextGen
 import { IImageGenerationClient } from "../generation/clients/interfaces/IImageGenerationClient";
 import { sendChatMessage } from "../utils/utils";
 import { ITool } from "../tools/interfaces/ITool";
+import { SceneViewerTool } from "../tools/SceneViewerTool";
+import { CreateEncounterTool } from "../tools/CreateEncounterTool";
+
+import { ICommand } from "../commands/interfaces/ICommand";
+import { ChatCommand } from "../commands/ChatCommand";
+import { SceneViewCommand } from "../commands/SceneViewCommand";
+import { EncounterCommand } from "../commands/EncounterCommand";
 
 class ContextManager implements IContextManager {
 
@@ -23,13 +31,14 @@ class ContextManager implements IContextManager {
     public imageGenerationClient: IImageGenerationClient;   
     public fileStore: IFileStore;
     public logger: ILogger;
+    public tools: ITool[] = []; // Store all available tools
 
     private entityManager: IEntityManager;
-    private tools: ITool[] = []; // Store all available tools
 
     private loadedCampaign: Campaign | null = null; // Store the loaded campaign
     private loadedSetting: Setting | null = null; // Store the loaded setting
     private currentStoryline: Storyline | null = null; // Store the current storyline
+    private commands: {name: string, command: ICommand}[] = []; // Store the commands
 
     constructor(
         textGenerationClient: ITextGenerationClient,
@@ -45,6 +54,12 @@ class ContextManager implements IContextManager {
         this.logger = logger;
         this.entityManager = entityManager;
         this.tools = tools; // Initialize tools
+
+        this.commands = [
+            {name: "/aidm", command: new ChatCommand()},
+            {name: "/aishow", command: new SceneViewCommand()},
+            {name: "/aiencounter", command: new EncounterCommand()},
+        ]
     }
 
     async loadContext(setting: Setting, campaign: Campaign): Promise<Context | null> {
@@ -83,56 +98,13 @@ class ContextManager implements IContextManager {
     }
 
     // User sent a message to the AI DM
-    async sendUserMessage(message: string): Promise<void> {
-        sendChatMessage(message); // Send the user message to the chat
-
-        let response: string = "";
-        try {
-            response = await this.textGenerationClient.generateText(message, this.chatHistory);
-        } catch (error) {
-            this.logger.error("Error generating text:", error);
+    async sendUserMessage(message: string, chatData: ChatData): Promise<void> {
+        //sendChatMessage(message); // Send the user message to the chat
+        const command: ICommand | undefined = this.commands.find(cmd => cmd.name === message.split(" ")[0])?.command;
+        if (command) {
+            await command.execute(message, chatData, this); // Execute the command
             return;
         }
-        this.chatHistory.push(message); // Add user message to chat history
-        this.chatHistory.push(response); // Add AI response to chat history
-        sendChatMessage(response); // Send the AI response to the chat
-
-        // Check if any tools should be fired
-        const toolToFire = await this.checkForTool();
-        if (toolToFire) {
-            this.logger.info(`Firing tool: ${toolToFire.name}`);
-            toolToFire.run(this);
-        }
-    }
-
-    async checkForTool(): Promise<ITool | null> {
-        const prompt: string = `
-        I am going to give you a list of tools
-        Each tool has a name an a description
-        The description explains when the tool should be fired
-        I want you to tell me which tool should be fired based on the current context of our conversation
-
-        Here is the list of tools:
-        ${this.tools.map(tool => `Name: ${tool.name}\nDescription: ${tool.description}`).join("\n")}
-
-        I want you to respond with the name of the tool that should be fired
-        Only respond with the name of the tool
-        It's possible that no tool should be fired, in that case respond with 'None'
-        Do not respond with anything else
-        `
-
-        const response: string = await this.textGenerationClient.generateText(prompt, this.chatHistory);
-
-        if (response.trim() === "None") {
-            return null; // No tool should be fired
-        }
-
-        const tool: ITool | undefined = this.tools.find(tool => tool.name === response.trim());
-        if (!tool) {
-            this.logger.error(`Tool not found: ${response}`);
-            return null; // Tool not found
-        }
-        return tool; // Return the tool to be fired
     }
 
     // Get the initial prompt for the AI DM

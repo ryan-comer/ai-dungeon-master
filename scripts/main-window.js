@@ -3,6 +3,14 @@ import {
 } from './campaign-window.js';
 import { getCoreManager } from "./core-manager-instance.js";
 
+Hooks.on('chatMessage', (chatLog, messageText, chatData) => {
+    const coreManager = getCoreManager();
+    coreManager.userMessage(messageText, chatData);
+    if (messageText.startsWith('/ai')) {
+        return false;
+    }
+})
+
 export function initializeMainWindow() {
     const coreManager = getCoreManager();
 
@@ -22,11 +30,13 @@ export function initializeMainWindow() {
                 chatControls.before(templateElement);
             })
             .then(() => {
+                /*
                 document.getElementById('ai-dm-submit-prompt').addEventListener('click', () => {
                     const prompt = document.getElementById('ai-dm-prompt').value;
 
-                    coreManager.userMessage(prompt);
+                    //coreManager.userMessage(prompt);
                 });
+                */
 
                 document.getElementById('ai-dm-settings-button').addEventListener('click', () => {
                     const campaignWindow = new CampaignWindow();

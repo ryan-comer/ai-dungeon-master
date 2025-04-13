@@ -286,12 +286,13 @@ class CreateEncounterTool implements ITool {
 
     // Create a scene for the encounter in FoundryVTT
     async createEncounterScene(encounter: Encounter, contextManager: IContextManager, baseEncounterPath: string, backgroundWidth: number, backgroundHeight: number): Promise<string> {
-        const newPrompt: string = `A 2D DnD battlemap with a top-down viewpoint that has the following description: ${encounter.battlemapPrompt} Point of view is high up looking straight down like you're looking at a battlemap in a tabletop rpg game. Do not make any other point of view other than top-down birds-eye point of view.`;
+        const newPrompt: string = `A 2D DnD battlemap with a top-down viewpoint. POV is high up looking straight down (birds-eye view) that has the following description: ${encounter.battlemapPrompt}`;
         const imageData = await contextManager.imageGenerationClient.generateImage(newPrompt, {
             width: backgroundWidth,
             height: backgroundHeight
         });
-        const imagePath: string = `${baseEncounterPath}/battlemap.png`;
+        const randomSuffix = Math.floor(Math.random() * 1000000); // Generate a random number
+        const imagePath: string = `${baseEncounterPath}/battlemap_${randomSuffix}.png`;
         await contextManager.fileStore.saveImage(imagePath, imageData);
 
         const newScene: any = await Scene.create({
@@ -312,7 +313,46 @@ class CreateEncounterTool implements ITool {
         await newScene.activate();
         await (newScene as Scene).createThumbnail();
 
-        return imageData;
+        // Ask if the background is good
+        const result = await foundry.applications.api.DialogV2.prompt({
+            window: {
+                title: "Battlemap Confirmation",
+                frame: true,
+                positioned: true,
+                icon: "",
+                controls: [],
+                minimizable: false,
+                resizable: true,
+                contentTag: "",
+                contentClasses: []
+            },
+            content: `<p>Is the background image good?</p>`,
+            buttons: [
+                {
+                    action: "ok",
+                    label: "OK",
+                    default: true,
+                    callback: (): any => {
+                        console.log("User confirmed the background image.");
+                    }
+                },
+                {
+                    action: "regenerate",
+                    label: "Regenerate",
+                    callback: (): any => {
+                        console.log("User wants to regenerate the background image.");
+                    }
+                }
+            ],
+            modal: true
+        })
+
+        if (result === "regenerate") {
+            // Recursively re-generate the image until the user is satisfied
+            return this.createEncounterScene(encounter, contextManager, baseEncounterPath, backgroundWidth, backgroundHeight);
+        } else {
+            return imageData;
+        }
     }
 
     getEncounterPrompt(context: string): string {

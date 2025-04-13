@@ -65,7 +65,7 @@ class SemanticIndex implements ISemanticIndex {
         The goal is to avoid creating duplicate entities in the semantic index.
         If the entity is the same as an existing entity, return the existing entity. If it's not in the list, don't return anything.
 
-        It's possible that nothing will match. If there is no entity that matches the prompt, return {'result': 'none'}.
+        It's possible that nothing will match. If there is no entity that matches the prompt, return {"result": "none"}.
 
         Only reply with JSON, nothing else.
         `;

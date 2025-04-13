@@ -352,6 +352,7 @@ class EntityManager implements IEntityManager {
         await this.semanticIndex.addEntity(EntityType.Character, character.name, JSON.stringify(JSON.parse(context), null, '\t'), newCharacter, setting, campaign);
 
         // Get the prompt for the character portrait
+        /*
         const portraitPrompt: string = await this.textGenerationClient.generateText(`
             I want you to give me a prompt to generate a dnd character portrait for a character.
             This prompt will be used in an image generator to create a portrait for the character.
@@ -373,6 +374,7 @@ class EntityManager implements IEntityManager {
         //await this.imageGenerationClient.unloadModel();
 
         await this.fileStore.saveCharacterImage(setting.name, campaign.name, character.name, "portrait.png", imageData);
+        */
         return character;
     }
 
@@ -405,6 +407,7 @@ class EntityManager implements IEntityManager {
         await this.semanticIndex.addEntity(EntityType.Location, location.name, context, newLocation, setting, campaign);
 
         // Get the prompt for the location image
+        /*
         const imagePrompt: string = await this.textGenerationClient.generateText(`
             I want you to give me a prompt to generate an image for a location in a dnd campaign.
             This image will be used as the backdrop for the location (e.g. what the players see when they arrive at the location).
@@ -427,6 +430,7 @@ class EntityManager implements IEntityManager {
         //await this.imageGenerationClient.unloadModel();
 
         await this.fileStore.saveLocationImage(setting.name, campaign.name, location.name, "background.png", imageData);
+        */
 
         return location;
     }
@@ -460,6 +464,7 @@ class EntityManager implements IEntityManager {
         await this.semanticIndex.addEntity(EntityType.Faction, faction.name, context, newFaction, setting, campaign);
 
         // Get the prompt for the faction image
+        /*
         const imagePrompt: string = await this.textGenerationClient.generateText(`
             I want you to give me a prompt to generate an image for an emblem that represents a faction in a dnd campaign.
             This prompt will be used in an image generator to create an image of an emblem for the faction
@@ -480,6 +485,7 @@ class EntityManager implements IEntityManager {
         //await this.imageGenerationClient.unloadModel();
 
         await this.fileStore.saveFactionImage(setting.name, campaign.name, faction.name, "emblem.png", imageData);
+        */
 
         return faction;
     }

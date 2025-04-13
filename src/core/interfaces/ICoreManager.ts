@@ -2,6 +2,16 @@ import { Campaign } from "../models/Campaign";
 import { Setting } from "../models/Setting";
 import { Storyline } from "../models/Storyline";
 
+class ChatData {
+    user: string;
+    speaker: object;
+
+    constructor(user: string, speaker: object) {
+        this.user = user;
+        this.speaker = speaker;
+    }
+}
+
 // The core manager that manages the core state of the AI Dungeon Master
 interface ICoreManager {
     initialize(): void;
@@ -18,11 +28,11 @@ interface ICoreManager {
     getLoadedCampaign(): Promise<Campaign | null>;
     startSession(): Promise<void>;
 
-    userMessage(message: string): Promise<void>;
+    userMessage(message: string, chatData: ChatData): Promise<void>;
 
     // Event handlers
     on(event: string, callback: (...args: any[]) => void): void;
     off(event: string, callback: (...args: any[]) => void): void;
 }
 
-export { ICoreManager };
+export { ICoreManager, ChatData };

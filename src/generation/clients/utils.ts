@@ -2,7 +2,7 @@
 async function RepeatJsonGeneration(prompt: string, 
     generationFunction: (input: string) => Promise<string>, 
     regenerateCheckFunction: (input: string) => boolean = (input: string) => true,
-    numAttempts: number=3) {
+    numAttempts: number=5) {
     let currentAttempt = 0
 
     let response: string = ""
@@ -38,6 +38,7 @@ function TryParseJson(buffer: string, returnString: boolean=false): any {
         }
     } catch (e) {
         console.error("Failed to parse JSON chunk:", e);
+        console.log(jsonText);
         return null;
     }
 }

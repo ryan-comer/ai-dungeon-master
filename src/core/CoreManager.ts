@@ -1,4 +1,4 @@
-import { ICoreManager } from "./interfaces/ICoreManager";
+import { ChatData, ICoreManager } from "./interfaces/ICoreManager";
 import { ICampaignManager } from "./interfaces/ICampaignManager";
 import { CampaignManager } from "./CampaignManager";
 import { IContextManager } from "./interfaces/IContextManager";
@@ -23,6 +23,7 @@ import { EventEmitter } from "events"; // Add this import for event handling
 
 import { ITool } from "../tools/interfaces/ITool";
 import { CreateEncounterTool } from "../tools/CreateEncounterTool";
+import { SceneViewerTool } from "../tools/SceneViewerTool";
 
 class CoreManager implements ICoreManager {
     private campaignManager: ICampaignManager;
@@ -37,7 +38,8 @@ class CoreManager implements ICoreManager {
     private loadedStoryline: Storyline | null = null; // Store the loaded storyline
 
     private tools: ITool[] = [
-        new CreateEncounterTool(), // Add your tools here
+        //new CreateEncounterTool()
+        //new SceneViewerTool()
     ];
 
     constructor(textGenerationClient: ITextGenerationClient, imageGenerationClient: IImageGenerationClient, fileStore: IFileStore, logger: ILogger=new Logger()) {
@@ -136,9 +138,10 @@ class CoreManager implements ICoreManager {
     }
 
     // User sent a message to the AI Dungeon Master
-    async userMessage(message: string): Promise<void> {
-        this.logger.info("User message received");
-        await this.contextManager.sendUserMessage(message);
+    async userMessage(message: string, chatData: ChatData): Promise<void> {
+        this.logger.info("User message received:");
+        console.log("Chat data:", chatData);
+        await this.contextManager.sendUserMessage(message, chatData);
     }
 
 }
