@@ -5,18 +5,41 @@ import { getCoreManager } from "./core-manager-instance.js";
 
 Hooks.on('chatMessage', (chatLog, messageText, chatData) => {
     const coreManager = getCoreManager();
-    coreManager.userMessage(messageText, chatData);
     if (messageText.startsWith('/ai')) {
+        if (game.user.isGM) {
+            // If the user is a GM, we can process the command directly
+            console.log("Processing command as GM:", messageText);
+            coreManager.userMessage(messageText, chatData);
+        } else {
+            // Send the message to the GM's instance
+            console.log("Sending command to GM:", messageText);
+            game.socket.emit('module.ai-dungeon-master', {
+                type: 'userMessage',
+                content: messageText,
+                chatData: chatData
+            });
+        }
         return false;
     }
-})
+});
+
 
 export function initializeMainWindow() {
     const coreManager = getCoreManager();
 
+    // Listen for messages sent to the GM's instance
+    if (game.user.isGM) {
+        game.socket.on('module.ai-dungeon-master', (data) => {
+            console.log("Received message from player:", data);
+            if (data.type === 'userMessage') {
+                coreManager.userMessage(data.content, data.chatData);
+            }
+        });
+    }
+
     // Wait for the DOM to be fully loaded
     const chatControls = document.getElementById('chat-controls');
-    if (chatControls) {
+    if (chatControls && game.user.isGM) {
 
         const templatePath = 'modules/ai-dungeon-master/templates/main-window.html';
         fetch(templatePath)

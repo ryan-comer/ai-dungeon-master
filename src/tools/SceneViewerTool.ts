@@ -43,7 +43,8 @@ class SceneViewerTool implements ITool {
                 },
                 grid: {
                     type: 0
-                }
+                },
+                tokenVision: false
             };
 
             scene = await Scene.create(sceneData);

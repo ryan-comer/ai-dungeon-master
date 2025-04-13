@@ -307,7 +307,8 @@ class CreateEncounterTool implements ITool {
             grid: {
                 type: 1,
                 size: 100
-            }
+            },
+            tokenVision: false
         });
 
         await newScene.activate();
@@ -317,12 +318,12 @@ class CreateEncounterTool implements ITool {
         const result = await foundry.applications.api.DialogV2.prompt({
             window: {
                 title: "Battlemap Confirmation",
-                frame: true,
-                positioned: true,
+                frame: false,
+                positioned: false,
                 icon: "",
                 controls: [],
                 minimizable: false,
-                resizable: true,
+                resizable: false,
                 contentTag: "",
                 contentClasses: []
             },

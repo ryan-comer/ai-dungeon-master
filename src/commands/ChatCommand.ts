@@ -22,7 +22,7 @@ class ChatCommand implements ICommand {
             return;
         }
 
-        sendChatMessage(`${chatData.speaker}: ${message}`); // Send the user message to the chat
+        sendChatMessage(`${chatData.speaker.alias}: ${message}`); // Send the user message to the chat
 
         let response: string = "";
         try {

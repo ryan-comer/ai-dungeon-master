@@ -4,9 +4,9 @@ import { Storyline } from "../models/Storyline";
 
 class ChatData {
     user: string;
-    speaker: object;
+    speaker: any;
 
-    constructor(user: string, speaker: object) {
+    constructor(user: string, speaker: any) {
         this.user = user;
         this.speaker = speaker;
     }

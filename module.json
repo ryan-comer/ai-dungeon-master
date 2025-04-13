@@ -21,5 +21,6 @@
   "esmodules": [
     "dist/module.js"
   ],
-  "dependencies": []
+  "dependencies": [],
+  "socket": true
 }
