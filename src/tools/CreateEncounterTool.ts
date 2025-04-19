@@ -22,7 +22,12 @@ class CreateEncounterTool implements ITool {
         
         // Get the Encounter object
         const result: string = await RepeatJsonGeneration(prompt, async (repeatPrompt: string): Promise<string> => {
-            const response = await contextManager.textGenerationClient.generateText(repeatPrompt, contextManager.chatHistory);
+            const response = await contextManager.textGenerationClient.generateText(repeatPrompt, contextManager.chatHistory, {
+                model: "gemini-2.5-flash-preview-04-17",
+                thinkingConfig: {
+                    thinkingBudget: 2048
+                }
+            });
             return response;
         }, (response: string): boolean => {
             try {
@@ -140,7 +145,7 @@ class CreateEncounterTool implements ITool {
                             value: entity.armorClass
                         },
                         movement: {
-                            value: entity.speed
+                            ...entity.movement
                         }
                     },
                     abilities: {
@@ -323,7 +328,7 @@ class CreateEncounterTool implements ITool {
                 icon: "",
                 controls: [],
                 minimizable: false,
-                resizable: false,
+                resizable: true,
                 contentTag: "",
                 contentClasses: []
             },
@@ -396,7 +401,14 @@ class CreateEncounterTool implements ITool {
                 },
                 "armorClass": 1, // Armor class of the entity (number)
                 "hitPoints": 1, // Hit points of the entity (number)
-                "speed": 30, // Speed of the entity (number)
+                "movement": {
+                    "burrow": 0, // Burrow speed (number)
+                    "climb": 0, // Climb speed (number)
+                    "fly": 0, // Fly speed (number)
+                    "hover": false, // Hover ability (boolean)
+                    "swim": 0, // Swim speed (number)
+                    "walk": 0 // Walk speed (number)
+                }
                 "weapons": [
                     {
                     "name": "Name of the weapon",

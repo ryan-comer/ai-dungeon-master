@@ -13,7 +13,7 @@ class SceneViewCommand implements ICommand {
         this.description = "Command to view the current scene.";
     }
 
-    async execute(message: string, chatData: ChatData, contextManager: IContextManager): Promise<void> {
+    async execute(message: string, chatData: ChatData, contextManager: IContextManager): Promise<any> {
         sendChatMessage("Viewing the current scene...");
 
         // Logic to view the current scene

@@ -22,7 +22,7 @@ class GoogleClient implements ITextGenerationClient {
         }) : [];
 
         const chat = this.genAI.chats.create({
-            model: this.model,
+            model: optionsOverride?.model ? optionsOverride.model : this.model,
             history: history
         });
 

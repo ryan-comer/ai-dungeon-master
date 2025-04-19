@@ -1,5 +1,6 @@
 import { IContextManager } from "./interfaces/IContextManager";
 import { IEntityManager } from "./interfaces/IEntityManager";
+
 import { Context } from "./models/Context";
 import { Setting } from "./models/Setting";
 import { Campaign } from "./models/Campaign";
@@ -23,6 +24,7 @@ import { ICommand } from "../commands/interfaces/ICommand";
 import { ChatCommand } from "../commands/ChatCommand";
 import { SceneViewCommand } from "../commands/SceneViewCommand";
 import { EncounterCommand } from "../commands/EncounterCommand";
+import { Player } from "./models/Player";
 
 class ContextManager implements IContextManager {
 
@@ -60,6 +62,32 @@ class ContextManager implements IContextManager {
             {name: "/aishow", command: new SceneViewCommand()},
             {name: "/aiencounter", command: new EncounterCommand()},
         ]
+    }
+
+    // Get the list of players in the campaign
+    async getPlayers (): Promise<Player[]> {
+        const playerActors: any[] = game.actors?.filter((actor: any) => {
+            return actor.hasPlayerOwner
+        }) ?? [];
+
+        const players: Player[] = playerActors.map((actor: any) => {
+            return {
+                name: actor.name,
+                level: actor.items.filter((i:any) => i.type == "class").reduce((acc: number, i: any) => acc + i.system.levels, 0),
+                attributes: {
+                    strength: actor.system.abilities.str.value,
+                    dexterity: actor.system.abilities.dex.value,
+                    constitution: actor.system.abilities.con.value,
+                    intelligence: actor.system.abilities.int.value,
+                    wisdom: actor.system.abilities.wis.value,
+                    charisma: actor.system.abilities.cha.value
+                },
+                ac: actor.system.attributes.ac.value,
+                hp: actor.system.attributes.hp.max,
+            };
+        });
+
+        return players;
     }
 
     async loadContext(setting: Setting, campaign: Campaign): Promise<Context | null> {
@@ -117,6 +145,7 @@ class ContextManager implements IContextManager {
         const characters: Character[] = await this.entityManager.getCharacters(this.loadedSetting, this.loadedCampaign);
         const locations: Location[] = await this.entityManager.getLocations(this.loadedSetting, this.loadedCampaign);
         const factions: Faction[] = await this.entityManager.getFactions(this.loadedSetting, this.loadedCampaign);
+        const players: Player[] = await this.getPlayers();
 
         return `
         You are a text-based AI Dungeon Master (DM) for a tabletop role-playing game (RPG).
@@ -192,6 +221,9 @@ class ContextManager implements IContextManager {
 
         This is the current storyline for the game:
         ${JSON.stringify(this.currentStoryline, null, 2)}
+
+        These are the players in the game:
+        ${JSON.stringify(players, null, 2)}
 
         Start off by describing the setting and the current situation in the game world.
         Include any important characters, locations, and events that are relevant to the players.

@@ -5,6 +5,8 @@ import { IContextManager } from "./interfaces/IContextManager";
 import { ContextManager } from "./ContextManager";
 import { IEntityManager } from "./interfaces/IEntityManager";
 import { EntityManager } from "./EntityManager";
+import { IEncounterManager } from "./interfaces/IEncounterManager";
+import { EncounterManager } from "./EncounterManager";
 
 import { ITextGenerationClient } from "../generation/clients/interfaces/ITextGenerationClient";
 import { IImageGenerationClient } from "../generation/clients/interfaces/IImageGenerationClient";
@@ -29,6 +31,8 @@ class CoreManager implements ICoreManager {
     private campaignManager: ICampaignManager;
     private contextManager: IContextManager
     private entityManager: IEntityManager;
+    private encounterManager: IEncounterManager;
+
     private logger: ILogger;
     private creationLock: Mutex; // Add a Mutex instance
     private eventEmitter: EventEmitter; // Add an EventEmitter instance
@@ -49,6 +53,9 @@ class CoreManager implements ICoreManager {
         this.creationLock = new Mutex(); // Initialize the Mutex
         this.contextManager = new ContextManager(textGenerationClient, imageGenerationClient, fileStore, this.entityManager, logger, this.tools); // Initialize the context manager
         this.eventEmitter = new EventEmitter(); // Initialize the EventEmitter
+
+        this.encounterManager = new EncounterManager(); // Initialize the encounter manager
+        this.encounterManager.init(this.contextManager); // Pass the context manager to the encounter manager
     }
 
     initialize(): void {
