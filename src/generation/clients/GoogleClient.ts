@@ -7,7 +7,7 @@ class GoogleClient implements ITextGenerationClient {
     private apiKey: string;
     private model: string;
 
-    constructor(apiKey: string, model: string = "gemini-2.0-flash") {
+    constructor(apiKey: string, model: string = "gemini-2.5-flash-preview-04-17") {
         this.apiKey = apiKey;
         this.genAI = new GoogleGenAI({apiKey});
         this.model = model;
@@ -22,7 +22,7 @@ class GoogleClient implements ITextGenerationClient {
         }) : [];
 
         const chat = this.genAI.chats.create({
-            model: this.model,
+            model: optionsOverride?.model ? optionsOverride.model : this.model,
             history: history
         });
 

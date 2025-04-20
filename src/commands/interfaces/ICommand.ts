@@ -4,7 +4,7 @@ import { ChatData } from "../../core/interfaces/ICoreManager";
 interface ICommand {
     name: string;
     description: string;
-    execute(message: string, chatData: ChatData, contextManager: IContextManager): Promise<void>;
+    execute(message: string, chatData: ChatData, contextManager: IContextManager): Promise<any>;
     help(): string;
 }
 

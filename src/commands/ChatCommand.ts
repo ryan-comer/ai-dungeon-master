@@ -13,7 +13,7 @@ class ChatCommand implements ICommand {
         this.description = "Command for the AI DM to process a user message and generate a response.";
     }
 
-    async execute(message: string, chatData: ChatData, contextManager: IContextManager): Promise<void> {
+    async execute(message: string, chatData: ChatData, contextManager: IContextManager): Promise<any> {
         // Parse the message to extract the user input from /aidm
         const commandPrefix: string = "/aidm";
         message = message.slice(commandPrefix.length).trim(); // Remove the command prefix

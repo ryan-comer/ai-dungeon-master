@@ -47,7 +47,14 @@ const EntityCodec = t.type({
     abilities: AbilityScoresCodec,
     armorClass: t.number,
     hitPoints: t.number,
-    speed: t.number,
+    movement: t.type({
+        burrow: t.number,
+        climb: t.number,
+        fly: t.number,
+        hover: t.boolean,
+        swim: t.number,
+        walk: t.number,
+    }),
     weapons: t.array(WeaponCodec),
     equipment: t.array(EquipmentCodec),
     spells: t.array(SpellCodec),
@@ -102,7 +109,14 @@ class Entity {
         public abilities: AbilityScores,
         public armorClass: number,
         public hitPoints: number,
-        public speed: number,
+        public movement: {
+            burrow: number;
+            climb: number;
+            fly: number;
+            hover: boolean;
+            swim: number;
+            walk: number;
+        },
         public weapons: Weapon[],
         public equipment: Equipment[],
         public spells: Spell[],
