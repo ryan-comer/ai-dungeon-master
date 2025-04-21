@@ -1,0 +1,2 @@
+# Overview
+This is the Discord bot that is used to play the voice of the dungeon master. This is a simple bot that exposes a single endpoint to receive what needs to be said. The bot will then convert the text into speech using TTS and play it into the voice channel.

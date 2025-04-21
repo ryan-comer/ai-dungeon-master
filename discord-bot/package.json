@@ -1,0 +1,19 @@
+{
+  "name": "discord-bot",
+  "version": "1.0.0",
+  "description": "This is the Discord bot that is used to play the voice of the dungeon master. This is a simple bot that exposes a single endpoint to receive what needs to be said. The bot will then convert the text into speech using TTS and play it into the voice channel.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node index.js"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@discordjs/voice": "^0.18.0",
+    "@google-cloud/text-to-speech": "^6.0.1",
+    "discord.js": "^14.18.0",
+    "dotenv": "^16.5.0",
+    "express": "^5.1.0"
+  }
+}
