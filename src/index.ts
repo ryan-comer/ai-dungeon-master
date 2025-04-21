@@ -1,6 +1,7 @@
 import { CoreManager } from "./core/CoreManager";
 import { GoogleClient } from "./generation/clients/GoogleClient";
 import { ForgeClient } from "./generation/clients/ForgeClient";
+import { DiscordSpeechClient } from "./generation/clients/DiscordSpeechClient";
 import 'dotenv/config';
 import { ITextGenerationClient } from "./generation/clients/interfaces/ITextGenerationClient";
 import { IImageGenerationClient } from "./generation/clients/interfaces/IImageGenerationClient";
@@ -8,14 +9,16 @@ import { IFileStore } from "./utils/interfaces/IFileStore";
 import { FileSystemStore } from "./utils/FileSystemStore";
 import { Setting } from "./core/models/Setting";
 import { Campaign } from "./core/models/Campaign";
+import { ITextToSpeechClient } from "./generation/clients/interfaces/ITextToSpeechClient";
 
 // Create a new instance of the core manager
 const textGenerationClient: ITextGenerationClient = new GoogleClient(process.env.GOOGLE_API_KEY as string);
 const imageGenerationClient: IImageGenerationClient = new ForgeClient();
+const speechClient: ITextToSpeechClient = new DiscordSpeechClient();
 const fileStore: IFileStore = new FileSystemStore('./storage');
 
 
-const coreManager = new CoreManager(textGenerationClient, imageGenerationClient, fileStore);
+const coreManager = new CoreManager(textGenerationClient, imageGenerationClient, speechClient, fileStore);
 
 // Initialize the core manager
 coreManager.initialize();

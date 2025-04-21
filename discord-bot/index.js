@@ -1,6 +1,7 @@
 const { Client, GatewayIntentBits, REST, Routes } = require('discord.js');
 const { joinVoiceChannel, createAudioPlayer, createAudioResource } = require('@discordjs/voice');
 const express = require('express');
+const cors = require('cors'); // Add this line
 const textToSpeech = require('@google-cloud/text-to-speech');
 const fs = require('fs');
 const util = require('util');
@@ -78,6 +79,7 @@ client.on('interactionCreate', async (interaction) => {
 
 // Local server setup
 const app = express();
+app.use(cors()); // Enable CORS
 app.use(express.json());
 
 app.post('/speak', async (req, res) => {

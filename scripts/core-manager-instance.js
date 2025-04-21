@@ -2,6 +2,7 @@ import { CoreManager } from "../src/core/CoreManager.ts";
 import { HidreamClient } from "../src/generation/clients/HidreamClient.ts";
 import { ForgeClient } from "../src/generation/clients/ForgeClient.ts";
 import { GoogleClient } from "../src/generation/clients/GoogleClient.ts";
+import { DiscordSpeechClient } from "../src/generation/clients/DiscordSpeechClient.ts";
 import { FoundryStore } from "../src/utils/FoundryStore.ts";
 import { Logger } from "../src/utils/Logger.ts";
 
@@ -15,6 +16,7 @@ export function getCoreManager() {
             new GoogleClient(googleApiKey),
             //new ForgeClient(),
             new HidreamClient(),
+            new DiscordSpeechClient(),
             new FoundryStore(),
             logger
         );

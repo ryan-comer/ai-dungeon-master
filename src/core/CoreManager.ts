@@ -26,6 +26,7 @@ import { EventEmitter } from "events"; // Add this import for event handling
 import { ITool } from "../tools/interfaces/ITool";
 import { CreateEncounterTool } from "../tools/CreateEncounterTool";
 import { SceneViewerTool } from "../tools/SceneViewerTool";
+import { ITextToSpeechClient } from "../generation/clients/interfaces/ITextToSpeechClient";
 
 class CoreManager implements ICoreManager {
     private campaignManager: ICampaignManager;
@@ -46,12 +47,12 @@ class CoreManager implements ICoreManager {
         //new SceneViewerTool()
     ];
 
-    constructor(textGenerationClient: ITextGenerationClient, imageGenerationClient: IImageGenerationClient, fileStore: IFileStore, logger: ILogger=new Logger()) {
+    constructor(textGenerationClient: ITextGenerationClient, imageGenerationClient: IImageGenerationClient, textToSpeechClient: ITextToSpeechClient, fileStore: IFileStore, logger: ILogger=new Logger()) {
         this.entityManager = new EntityManager(textGenerationClient, imageGenerationClient, fileStore);
         this.campaignManager = new CampaignManager(textGenerationClient, imageGenerationClient, fileStore, this.entityManager, logger);
         this.logger = logger;
         this.creationLock = new Mutex(); // Initialize the Mutex
-        this.contextManager = new ContextManager(textGenerationClient, imageGenerationClient, fileStore, this.entityManager, logger, this.tools); // Initialize the context manager
+        this.contextManager = new ContextManager(textGenerationClient, imageGenerationClient, textToSpeechClient, fileStore, this.entityManager, logger, this.tools); // Initialize the context manager
         this.eventEmitter = new EventEmitter(); // Initialize the EventEmitter
 
         this.encounterManager = new EncounterManager(); // Initialize the encounter manager

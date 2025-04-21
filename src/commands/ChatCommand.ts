@@ -35,6 +35,15 @@ class ChatCommand implements ICommand {
         contextManager.chatHistory.push(response); // Add AI response to chat history
         sendChatMessage(response); // Send the AI response to the chat
 
+        // Have the TTS speak the response
+        if (contextManager.textToSpeechClient) {
+            try {
+                await contextManager.textToSpeechClient.speak(response);
+            } catch (error) {
+                contextManager.logger.error("Error speaking text:", error);
+            }
+        }
+
         // Check if any tools should be fired
         if (contextManager.tools.length > 0) {
             const toolsToFire = await this.checkForTools(contextManager);

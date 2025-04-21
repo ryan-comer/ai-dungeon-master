@@ -15,6 +15,7 @@ import { IFileStore } from "../utils/interfaces/IFileStore";
 
 import { ITextGenerationClient } from "../generation/clients/interfaces/ITextGenerationClient";
 import { IImageGenerationClient } from "../generation/clients/interfaces/IImageGenerationClient";
+import { ITextToSpeechClient } from "../generation/clients/interfaces/ITextToSpeechClient";
 import { sendChatMessage } from "../utils/utils";
 import { ITool } from "../tools/interfaces/ITool";
 import { SceneViewerTool } from "../tools/SceneViewerTool";
@@ -31,6 +32,7 @@ class ContextManager implements IContextManager {
     public chatHistory: string[] = []; // Store the chat history
     public textGenerationClient: ITextGenerationClient;
     public imageGenerationClient: IImageGenerationClient;   
+    public textToSpeechClient: ITextToSpeechClient;
     public fileStore: IFileStore;
     public logger: ILogger;
     public tools: ITool[] = []; // Store all available tools
@@ -45,6 +47,7 @@ class ContextManager implements IContextManager {
     constructor(
         textGenerationClient: ITextGenerationClient,
         imageGenerationClient: IImageGenerationClient,
+        textToSpeechClient: ITextToSpeechClient,
         fileStore: IFileStore,
         entityManager: IEntityManager,
         logger: ILogger,
@@ -52,6 +55,7 @@ class ContextManager implements IContextManager {
     ) {
         this.textGenerationClient = textGenerationClient;
         this.imageGenerationClient = imageGenerationClient;
+        this.textToSpeechClient = textToSpeechClient;
         this.fileStore = fileStore;
         this.logger = logger;
         this.entityManager = entityManager;
@@ -121,6 +125,15 @@ class ContextManager implements IContextManager {
         this.chatHistory.push(prompt); // Add initial prompt to chat history
         this.chatHistory.push(response); // Add AI response to chat history
         sendChatMessage(response);
+
+        // Send to TTS
+        if (this.textToSpeechClient) {
+            try {
+                await this.textToSpeechClient.speak(response);
+            } catch (error) {
+                this.logger.error("Error speaking text:", error);
+            }
+        }
 
         this.logger.info(`Started session: ${this.loadedCampaign.name}`);
     }
