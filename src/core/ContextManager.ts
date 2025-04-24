@@ -26,10 +26,12 @@ import { ChatCommand } from "../commands/ChatCommand";
 import { SceneViewCommand } from "../commands/SceneViewCommand";
 import { EncounterCommand } from "../commands/EncounterCommand";
 import { Player } from "./models/Player";
+import { Session } from "./models/Session";
+
+import { stripInvalidFilenameChars } from "../utils/utils";
 
 class ContextManager implements IContextManager {
 
-    public chatHistory: string[] = []; // Store the chat history
     public textGenerationClient: ITextGenerationClient;
     public imageGenerationClient: IImageGenerationClient;   
     public textToSpeechClient: ITextToSpeechClient;
@@ -43,6 +45,8 @@ class ContextManager implements IContextManager {
     private loadedSetting: Setting | null = null; // Store the loaded setting
     private currentStoryline: Storyline | null = null; // Store the current storyline
     private commands: {name: string, command: ICommand}[] = []; // Store the commands
+
+    private currentSession: Session | null = null; // Store the current session
 
     constructor(
         textGenerationClient: ITextGenerationClient,
@@ -111,31 +115,75 @@ class ContextManager implements IContextManager {
         return null;
     }
 
-    async startSession(): Promise<void> {
+    async createSession(settingName: string, campaignName: string, sessionName: string): Promise<Session> {
+        const settingNameStripped: string = stripInvalidFilenameChars(settingName);
+        const campaignNameStripped: string = stripInvalidFilenameChars(campaignName);
+        const sessionNameStripped: string = stripInvalidFilenameChars(sessionName);
+
+        const session: Session = new Session(sessionName);
+
+        logger.info("Saving session...");
+        await this.fileStore.saveSession(settingNameStripped, campaignNameStripped, sessionNameStripped, session);
+
+        return session;
+    }
+
+    async startSession(settingName: string, campaignName: string, sessionName: string): Promise<void> {
         if (!this.loadedSetting || !this.loadedCampaign) {
             this.logger.error("No loaded setting or campaign to start.");
             return;
         }
 
-        const prompt: string = await this.getInitialPrompt();
+        const session: Session | null = await this.getSession(settingName, campaignName, sessionName);
 
-        const response: string = await this.textGenerationClient.generateText(
-            prompt
-        );
-        this.chatHistory.push(prompt); // Add initial prompt to chat history
-        this.chatHistory.push(response); // Add AI response to chat history
-        sendChatMessage(response);
-
-        // Send to TTS
-        if (this.textToSpeechClient) {
-            try {
-                await this.textToSpeechClient.speak(response);
-            } catch (error) {
-                this.logger.error("Error speaking text:", error);
-            }
+        if (!session) {
+            this.logger.error(`Session ${sessionName} not found in campaign ${campaignName}`);
+            return;
         }
+        this.currentSession = session; // Set the current session
 
-        this.logger.info(`Started session: ${this.loadedCampaign.name}`);
+        // Load the context for the session
+        await this.loadContext(this.loadedSetting, this.loadedCampaign);
+
+        // Check if we need to get the initial prompt
+        if (this.currentSession.chatHistory.length === 0) {
+            const prompt: string = await this.getInitialPrompt();
+            const response: string = await this.textGenerationClient.generateText(
+                prompt
+            );
+
+            this.currentSession.chatHistory.push(prompt); // Add initial prompt to chat history
+            this.currentSession.chatHistory.push(response); // Add AI response to chat history
+            sendChatMessage(response);
+
+            // Send to TTS
+            if (this.textToSpeechClient) {
+                try {
+                    await this.textToSpeechClient.speak(response);
+                } catch (error) {
+                    this.logger.error("Error speaking text:", error);
+                }
+            }
+
+            this.logger.info(`Started session: ${this.loadedCampaign.name}`);
+        }
+    }
+
+    async getSessions(settingName: string, campaignName: string): Promise<Session[]> {
+        const settingNameStripped: string = stripInvalidFilenameChars(settingName);
+        const campaignNameStripped: string = stripInvalidFilenameChars(campaignName);
+
+        const sessions: Session[] = await this.fileStore.getSessions(settingNameStripped, campaignNameStripped);
+        return sessions;
+    }
+
+    async getSession(settingName: string, campaignName: string, sessionName: string): Promise<Session | null> {
+        const settingNameStripped: string = stripInvalidFilenameChars(settingName);
+        const campaignNameStripped: string = stripInvalidFilenameChars(campaignName);
+        const sessionNameStripped: string = stripInvalidFilenameChars(sessionName);
+
+        const session: Session | null = await this.fileStore.getSession(settingNameStripped, campaignNameStripped, sessionNameStripped);
+        return session;
     }
 
     // User sent a message to the AI DM
@@ -146,6 +194,25 @@ class ContextManager implements IContextManager {
             await command.execute(message, chatData, this); // Execute the command
             return;
         }
+    }
+
+    async addChatHistory(message: string): Promise<void> {
+        if (!this.currentSession) {
+            this.logger.error("No current session to add chat history.");
+            return;
+        }
+
+        this.currentSession.chatHistory.push(message); // Add user message to chat history
+        await this.fileStore.saveSession(this.loadedSetting!.name, this.loadedCampaign!.name, this.currentSession.name, this.currentSession); // Save the session with updated chat history
+    }
+
+    async getChatHistory(): Promise<string[]> {
+        if (!this.currentSession) {
+            this.logger.error("No current session to get chat history.");
+            return [];
+        }
+
+        return this.currentSession.chatHistory; // Return the chat history of the current session
     }
 
     // Get the initial prompt for the AI DM

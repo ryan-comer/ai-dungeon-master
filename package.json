@@ -6,6 +6,7 @@
   "main": "src/main.ts",
   "scripts": {
     "start": "tsx ./src/index.ts",
+    "discord": "cpy .env discord-bot/ && npm run start --prefix discord-bot",
     "compile": "tsc && tsc-alias",
     "build": "webpack --config webpack.config.js"
   },
@@ -25,6 +26,7 @@
   },
   "devDependencies": {
     "@league-of-foundry-developers/foundry-vtt-types": "^12.331.3-beta",
+    "cpy-cli": "^5.0.0",
     "ts-loader": "^9.5.2",
     "webpack": "^5.98.0",
     "webpack-cli": "^6.0.1"

@@ -17,12 +17,13 @@ class CreateEncounterTool implements ITool {
     `;
 
     async run(contextManager: IContextManager): Promise<void> {
-        const context: string = contextManager.chatHistory.join("\n");
+        const chatHistory: string[] = await contextManager.getChatHistory();
+        const context: string = chatHistory.join("\n");
         const prompt: string = this.getEncounterPrompt(context);
         
         // Get the Encounter object
         const result: string = await RepeatJsonGeneration(prompt, async (repeatPrompt: string): Promise<string> => {
-            const response = await contextManager.textGenerationClient.generateText(repeatPrompt, contextManager.chatHistory, {
+            const response = await contextManager.textGenerationClient.generateText(repeatPrompt, chatHistory, {
                 model: "gemini-2.5-flash-preview-04-17",
                 thinkingConfig: {
                     thinkingBudget: 2048

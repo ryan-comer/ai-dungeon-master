@@ -6,6 +6,9 @@ import { Character } from "../core/models/Character";
 import { Location } from "../core/models/Location";
 import { Faction } from "../core/models/Faction";
 import { EntityType } from "../core/SemanticIndex";
+import { Session } from "../core/models/Session";
+
+import { stripInvalidFilenameChars } from "./utils";
 
 class FoundryStore implements IFileStore {
 
@@ -30,7 +33,7 @@ class FoundryStore implements IFileStore {
     }
 
     async getCampaigns(settingName: string): Promise<Campaign[]> {
-        settingName = this.stripInvalidFilenameChars(settingName);
+        settingName = stripInvalidFilenameChars(settingName);
         const campaignDirectories: string[] = await this.getDirectories(`${this.getBasePath()}/settings/${settingName}`);
 
         const campaigns: Campaign[] = [];
@@ -43,8 +46,39 @@ class FoundryStore implements IFileStore {
         return campaigns.length > 0 ? campaigns : [];
     }
 
+    async getSessions(settingName: string, campaignName: string): Promise<Session[]> {
+        settingName = stripInvalidFilenameChars(settingName);
+        campaignName = stripInvalidFilenameChars(campaignName);
+
+        console.log("Getting sessions for: ", settingName, campaignName)
+
+        const sessionDirectories: string[] = await this.getDirectories(`${this.getBasePath()}/settings/${settingName}/${campaignName}/sessions`);
+
+        console.log("Session directories: ", sessionDirectories)
+
+        const sessions: Session[] = [];
+        for (const sessionName of sessionDirectories) {
+            const session = await this.getSession(settingName, campaignName, sessionName);
+            if (session) {
+                sessions.push(session);
+            }
+        }
+
+        return sessions.length > 0 ? sessions : [];
+    }
+
+    async getSession(settingName: string, campaignName: string, sessionName: string): Promise<Session | null> {
+        settingName = stripInvalidFilenameChars(settingName);
+        campaignName = stripInvalidFilenameChars(campaignName);
+        sessionName = stripInvalidFilenameChars(sessionName);
+
+        const filePath = `${this.getBasePath()}/settings/${settingName}/${campaignName}/sessions/${sessionName}/session.json`;
+        const content = await this.loadFile(filePath);
+        return content ? JSON.parse(content) as Session : null;
+    }
+
     async getSetting(settingName: string): Promise<Setting | null> {
-        settingName = this.stripInvalidFilenameChars(settingName);
+        settingName = stripInvalidFilenameChars(settingName);
 
         const filePath = this.getSettingPath(settingName) + "/setting.json";
         const content = await this.loadFile(filePath);
@@ -52,8 +86,8 @@ class FoundryStore implements IFileStore {
     }
 
     async getCampaign(settingName: string, campaignName: string): Promise<Campaign | null> {
-        settingName = this.stripInvalidFilenameChars(settingName);
-        campaignName = this.stripInvalidFilenameChars(campaignName);
+        settingName = stripInvalidFilenameChars(settingName);
+        campaignName = stripInvalidFilenameChars(campaignName);
 
         const filePath = this.getCampaignPath(settingName, campaignName) + "/campaign.json";
         const content = await this.loadFile(filePath);
@@ -61,9 +95,9 @@ class FoundryStore implements IFileStore {
     }
 
     async getStoryline(settingName: string, campaignName: string, storylineName: string): Promise<Storyline | null> {
-        settingName = this.stripInvalidFilenameChars(settingName);
-        campaignName = this.stripInvalidFilenameChars(campaignName);
-        storylineName = this.stripInvalidFilenameChars(storylineName);
+        settingName = stripInvalidFilenameChars(settingName);
+        campaignName = stripInvalidFilenameChars(campaignName);
+        storylineName = stripInvalidFilenameChars(storylineName);
 
         const filePath = this.getStorylinePath(settingName, campaignName, storylineName);
         const content = await this.loadFile(filePath);
@@ -71,9 +105,9 @@ class FoundryStore implements IFileStore {
     }
 
     async getCharacter(settingName: string, campaignName: string, characterName: string): Promise<Character | null> {
-        settingName = this.stripInvalidFilenameChars(settingName);
-        campaignName = this.stripInvalidFilenameChars(campaignName);
-        characterName = this.stripInvalidFilenameChars(characterName);
+        settingName = stripInvalidFilenameChars(settingName);
+        campaignName = stripInvalidFilenameChars(campaignName);
+        characterName = stripInvalidFilenameChars(characterName);
 
         const filePath = `${this.getCharactersPath(settingName, campaignName)}/${characterName}/entity.json`;
         const content = await this.loadFile(filePath);
@@ -81,9 +115,9 @@ class FoundryStore implements IFileStore {
     }
 
     async getLocation(settingName: string, campaignName: string, locationName: string): Promise<Location | null> {
-        settingName = this.stripInvalidFilenameChars(settingName);
-        campaignName = this.stripInvalidFilenameChars(campaignName);
-        locationName = this.stripInvalidFilenameChars(locationName);
+        settingName = stripInvalidFilenameChars(settingName);
+        campaignName = stripInvalidFilenameChars(campaignName);
+        locationName = stripInvalidFilenameChars(locationName);
 
         const filePath = `${this.getLocationsPath(settingName, campaignName)}/${locationName}/entity.json`;
         const content = await this.loadFile(filePath);
@@ -91,9 +125,9 @@ class FoundryStore implements IFileStore {
     }
 
     async getFaction(settingName: string, campaignName: string, factionName: string): Promise<Faction | null> {
-        settingName = this.stripInvalidFilenameChars(settingName);
-        campaignName = this.stripInvalidFilenameChars(campaignName);
-        factionName = this.stripInvalidFilenameChars(factionName);
+        settingName = stripInvalidFilenameChars(settingName);
+        campaignName = stripInvalidFilenameChars(campaignName);
+        factionName = stripInvalidFilenameChars(factionName);
 
         const filePath = `${this.getFactionsPath(settingName, campaignName)}/${factionName}/entity.json`;
         const content = await this.loadFile(filePath);
@@ -101,8 +135,8 @@ class FoundryStore implements IFileStore {
     }
 
     async getCharacters(settingName: string, campaignName: string): Promise<Character[]> {
-        settingName = this.stripInvalidFilenameChars(settingName);
-        campaignName = this.stripInvalidFilenameChars(campaignName);
+        settingName = stripInvalidFilenameChars(settingName);
+        campaignName = stripInvalidFilenameChars(campaignName);
 
         const charactersPath: string = this.getCharactersPath(settingName, campaignName);
         const characterDirectories: string[] = await this.getDirectories(charactersPath);
@@ -119,8 +153,8 @@ class FoundryStore implements IFileStore {
     }
 
     async getLocations(settingName: string, campaignName: string): Promise<Location[]> {
-        settingName = this.stripInvalidFilenameChars(settingName);
-        campaignName = this.stripInvalidFilenameChars(campaignName);
+        settingName = stripInvalidFilenameChars(settingName);
+        campaignName = stripInvalidFilenameChars(campaignName);
 
         const locationsPath: string = this.getLocationsPath(settingName, campaignName);
         const locationDirectories: string[] = await this.getDirectories(locationsPath);
@@ -137,8 +171,8 @@ class FoundryStore implements IFileStore {
     }
 
     async getFactions(settingName: string, campaignName: string): Promise<Faction[]> {
-        settingName = this.stripInvalidFilenameChars(settingName);
-        campaignName = this.stripInvalidFilenameChars(campaignName);
+        settingName = stripInvalidFilenameChars(settingName);
+        campaignName = stripInvalidFilenameChars(campaignName);
 
         const factionsPath: string = this.getFactionsPath(settingName, campaignName);
         const factionDirectories: string[] = await this.getDirectories(factionsPath);
@@ -155,7 +189,7 @@ class FoundryStore implements IFileStore {
     }
 
     async saveSetting(settingName: string, setting: Setting): Promise<void> {
-        settingName = this.stripInvalidFilenameChars(settingName);
+        settingName = stripInvalidFilenameChars(settingName);
 
         // Save the setting to a file
         const filePath: string = `${this.getSettingPath(settingName)}/setting.json`;
@@ -163,78 +197,88 @@ class FoundryStore implements IFileStore {
     }
 
     async saveCampaign(settingName: string, campaignName: string, campaign: Campaign): Promise<void> {
-        settingName = this.stripInvalidFilenameChars(settingName);
-        campaignName = this.stripInvalidFilenameChars(campaignName);
+        settingName = stripInvalidFilenameChars(settingName);
+        campaignName = stripInvalidFilenameChars(campaignName);
 
         const filePath = this.getCampaignPath(settingName, campaignName) + "/campaign.json";
         await this.saveFile(filePath, JSON.stringify(campaign, null, 2));
     }
 
     async saveStoryline(settingName: string, campaignName: string, storyline: Storyline): Promise<void> {
-        settingName = this.stripInvalidFilenameChars(settingName);
-        campaignName = this.stripInvalidFilenameChars(campaignName);
+        settingName = stripInvalidFilenameChars(settingName);
+        campaignName = stripInvalidFilenameChars(campaignName);
 
         const filePath = this.getStorylinePath(settingName, campaignName, storyline.name);
         await this.saveFile(filePath, JSON.stringify(storyline, null, 2));
     }
 
     async saveCharacter(settingName: string, campaignName: string, character: Character): Promise<void> {
-        settingName = this.stripInvalidFilenameChars(settingName);
-        campaignName = this.stripInvalidFilenameChars(campaignName);
-        const characterName: string = this.stripInvalidFilenameChars(character.name);
+        settingName = stripInvalidFilenameChars(settingName);
+        campaignName = stripInvalidFilenameChars(campaignName);
+        const characterName: string = stripInvalidFilenameChars(character.name);
 
         const filePath = `${this.getCharactersPath(settingName, campaignName)}/${characterName}/entity.json`;
         await this.saveFile(filePath, JSON.stringify(character, null, 2));
     }
 
     async saveLocation(settingName: string, campaignName: string, location: Location): Promise<void> {
-        settingName = this.stripInvalidFilenameChars(settingName);
-        campaignName = this.stripInvalidFilenameChars(campaignName);
-        const locationName: string = this.stripInvalidFilenameChars(location.name);
+        settingName = stripInvalidFilenameChars(settingName);
+        campaignName = stripInvalidFilenameChars(campaignName);
+        const locationName: string = stripInvalidFilenameChars(location.name);
 
         const filePath = `${this.getLocationsPath(settingName, campaignName)}/${locationName}/entity.json`;
         await this.saveFile(filePath, JSON.stringify(location, null, 2));
     }
 
     async saveFaction(settingName: string, campaignName: string, faction: Faction): Promise<void> {
-        settingName = this.stripInvalidFilenameChars(settingName);
-        campaignName = this.stripInvalidFilenameChars(campaignName);
-        const factionName: string = this.stripInvalidFilenameChars(faction.name);
+        settingName = stripInvalidFilenameChars(settingName);
+        campaignName = stripInvalidFilenameChars(campaignName);
+        const factionName: string = stripInvalidFilenameChars(faction.name);
 
         const filePath = `${this.getFactionsPath(settingName, campaignName)}/${factionName}/entity.json`;
         await this.saveFile(filePath, JSON.stringify(faction, null, 2));
     }
 
     async saveCharacterImage(settingName: string, campaignName: string, characterName: string, fileName: string, base64Image: string): Promise<void> {
-        settingName = this.stripInvalidFilenameChars(settingName);
-        campaignName = this.stripInvalidFilenameChars(campaignName);
-        characterName = this.stripInvalidFilenameChars(characterName);
+        settingName = stripInvalidFilenameChars(settingName);
+        campaignName = stripInvalidFilenameChars(campaignName);
+        characterName = stripInvalidFilenameChars(characterName);
 
         const filePath = `${this.getCharactersPath(settingName, campaignName)}/${characterName}/${fileName}`;
         await this.saveImage(filePath, base64Image);
     }
 
     async saveLocationImage(settingName: string, campaignName: string, locationName: string, fileName: string, base64Image: string): Promise<void> {
-        settingName = this.stripInvalidFilenameChars(settingName);
-        campaignName = this.stripInvalidFilenameChars(campaignName);
-        locationName = this.stripInvalidFilenameChars(locationName);
+        settingName = stripInvalidFilenameChars(settingName);
+        campaignName = stripInvalidFilenameChars(campaignName);
+        locationName = stripInvalidFilenameChars(locationName);
 
         const filePath = `${this.getLocationsPath(settingName, campaignName)}/${locationName}/${fileName}`;
         await this.saveImage(filePath, base64Image);
     }
 
     async saveFactionImage(settingName: string, campaignName: string, factionName: string, fileName: string, base64Image: string): Promise<void> {
-        settingName = this.stripInvalidFilenameChars(settingName);
-        campaignName = this.stripInvalidFilenameChars(campaignName);
-        factionName = this.stripInvalidFilenameChars(factionName);
+        settingName = stripInvalidFilenameChars(settingName);
+        campaignName = stripInvalidFilenameChars(campaignName);
+        factionName = stripInvalidFilenameChars(factionName);
 
         const filePath = `${this.getFactionsPath(settingName, campaignName)}/${factionName}/${fileName}`;
         await this.saveImage(filePath, base64Image);
     }
 
+    async saveSession(settingName: string, campaignName: string, sessionName: string, session: Session): Promise<void> {
+        settingName = stripInvalidFilenameChars(settingName);
+        campaignName = stripInvalidFilenameChars(campaignName);
+        sessionName = stripInvalidFilenameChars(sessionName);
+
+        const filePath = `${this.getBasePath()}/settings/${settingName}/${campaignName}/sessions/${sessionName}/session.json`;
+        console.log("Saving session to: ", filePath)
+        await this.saveFile(filePath, JSON.stringify(session, null, 2));
+    }
+
     async getEntity(setting: Setting, campaign: Campaign, entityType: EntityType, prompt: string): Promise<any | null> {
         const basePath: string = this.getEntityBasePath(setting, campaign, entityType);
-        const entityFileName: string = this.stripInvalidFilenameChars(prompt);
+        const entityFileName: string = stripInvalidFilenameChars(prompt);
         const filePath: string = `${basePath}/${entityFileName}/entity.json`;
         const content = await this.loadFile(filePath);
         return content ? JSON.parse(content) : null;
@@ -242,7 +286,7 @@ class FoundryStore implements IFileStore {
 
     async saveEntity(setting: Setting, campaign: Campaign, entityType: EntityType, prompt: string, entity: any): Promise<void> {
         const basePath: string = this.getEntityBasePath(setting, campaign, entityType);
-        const entityFileName: string = this.stripInvalidFilenameChars(prompt);
+        const entityFileName: string = stripInvalidFilenameChars(prompt);
         const filePath: string = `${basePath}/${entityFileName}/entity.json`;
         await this.saveFile(filePath, JSON.stringify(entity, null, 2));
     }
@@ -580,44 +624,44 @@ class FoundryStore implements IFileStore {
     }
 
     getSettingPath(settingName: string): string {
-        settingName = this.stripInvalidFilenameChars(settingName);
+        settingName = stripInvalidFilenameChars(settingName);
         return `${this.getBasePath()}/settings/${settingName}`;
     }
 
     getCampaignPath(settingName: string, campaignName: string): string {
-        settingName = this.stripInvalidFilenameChars(settingName);
-        campaignName = this.stripInvalidFilenameChars(campaignName);
+        settingName = stripInvalidFilenameChars(settingName);
+        campaignName = stripInvalidFilenameChars(campaignName);
         return `${this.getBasePath()}/settings/${settingName}/${campaignName}`;
     }
 
     getStorylinePath(settingName: string, campaignName: string, storylineName: string): string {
-        settingName = this.stripInvalidFilenameChars(settingName);
-        campaignName = this.stripInvalidFilenameChars(campaignName);
-        storylineName = this.stripInvalidFilenameChars(storylineName);
+        settingName = stripInvalidFilenameChars(settingName);
+        campaignName = stripInvalidFilenameChars(campaignName);
+        storylineName = stripInvalidFilenameChars(storylineName);
         return `${this.getBasePath()}/settings/${settingName}/${campaignName}/storylines/${storylineName}.json`;
     }
 
     getCharactersPath(settingName: string, campaignName: string): string {
-        settingName = this.stripInvalidFilenameChars(settingName);
-        campaignName = this.stripInvalidFilenameChars(campaignName);
+        settingName = stripInvalidFilenameChars(settingName);
+        campaignName = stripInvalidFilenameChars(campaignName);
         return `${this.getBasePath()}/settings/${settingName}/${campaignName}/characters`;
     }
 
     getLocationsPath(settingName: string, campaignName: string): string {
-        settingName = this.stripInvalidFilenameChars(settingName);
-        campaignName = this.stripInvalidFilenameChars(campaignName);
+        settingName = stripInvalidFilenameChars(settingName);
+        campaignName = stripInvalidFilenameChars(campaignName);
         return `${this.getBasePath()}/settings/${settingName}/${campaignName}/locations`;
     }
 
     getFactionsPath(settingName: string, campaignName: string): string {
-        settingName = this.stripInvalidFilenameChars(settingName);
-        campaignName = this.stripInvalidFilenameChars(campaignName);
+        settingName = stripInvalidFilenameChars(settingName);
+        campaignName = stripInvalidFilenameChars(campaignName);
         return `${this.getBasePath()}/settings/${settingName}/${campaignName}/factions`;
     }
 
     getItemsPath(settingName: string, campaignName: string): string {
-        settingName = this.stripInvalidFilenameChars(settingName);
-        campaignName = this.stripInvalidFilenameChars(campaignName);
+        settingName = stripInvalidFilenameChars(settingName);
+        campaignName = stripInvalidFilenameChars(campaignName);
         return `${this.getBasePath()}/settings/${settingName}/${campaignName}/items`;
     }
 
@@ -630,10 +674,6 @@ class FoundryStore implements IFileStore {
         }[entityType];
 
         return basePath
-    }
-
-    stripInvalidFilenameChars(name: string): string {
-        return name.replace(/[<>:"/\\|?*]/g, "_");
     }
 }
 

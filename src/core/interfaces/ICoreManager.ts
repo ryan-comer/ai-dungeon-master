@@ -1,4 +1,5 @@
 import { Campaign } from "../models/Campaign";
+import { Session } from "../models/Session";
 import { Setting } from "../models/Setting";
 import { Storyline } from "../models/Storyline";
 
@@ -24,11 +25,14 @@ interface ICoreManager {
     getCampaign(settingName: string, campaignName: string): Promise<Campaign | null>;
     getStoryline(settingName: string, campaignName: string, storylineName: string): Promise<Storyline | null>;
 
-    loadCampaign(settingName: string, campaignName: string): Promise<Campaign | null>;
     getLoadedCampaign(): Promise<Campaign | null>;
-    startSession(): Promise<void>;
 
     userMessage(message: string, chatData: ChatData): Promise<void>;
+
+    createSession(settingName: string, campaignName: string, sessionName: string): Promise<Session>;
+    getSession(settingName: string, campaignName: string, sessionName: string): Promise<Session | null>;
+    getSessions(settingName: string, campaignName: string): Promise<Session[]>;
+    startSession(settingName: string, campaignName: string, sessionName: string): Promise<void>;
 
     // Event handlers
     on(event: string, callback: (...args: any[]) => void): void;

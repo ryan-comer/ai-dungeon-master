@@ -5,6 +5,7 @@ import { EntityType } from "../../core/SemanticIndex";
 import { Character } from "../../core/models/Character";
 import { Location } from "../../core/models/Location";
 import { Faction } from "../../core/models/Faction";
+import { Session } from "../../core/models/Session";
 
 interface IFileStore {
     getCharacters(settingName: string, campaignName: string): Promise<Character[]>;
@@ -27,6 +28,10 @@ interface IFileStore {
     saveCharacter(settingName: string, campaignName: string, character: Character): Promise<void>;
     saveLocation(settingName: string, campaignName: string, location: Location): Promise<void>;
     saveFaction(settingName: string, campaignName: string, faction: Faction): Promise<void>;
+
+    saveSession(settingName: string, campaignName: string, sessionName: string, session: Session): Promise<void>;
+    getSession(settingName: string, campaignName: string, sessionName: string): Promise<Session | null>;
+    getSessions(settingName: string, campaignName: string): Promise<Session[]>;
 
     saveCharacterImage(settingName: string, campaignName: string, characterName: string, fileName: string, base64Image: string): Promise<void>;
     saveLocationImage(settingName: string, campaignName: string, locationName: string, fileName: string, base64Image: string): Promise<void>;

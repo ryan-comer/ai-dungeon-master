@@ -15,23 +15,23 @@ label {
     color: #555;
 }
 
-#setting-creation, #campaign-creation, #campaign-selection, #setting-selection {
+#setting-creation, #campaign-creation, #campaign-selection, #setting-selection, #session-selection, #session-creation {
     display: flex;
     flex-direction: column;
     gap: 10px;
 }
 
-#setting-creation input, #campaign-creation input {
+#setting-creation input, #campaign-creation input, #session-creation input {
     width: 100%;
     font-size: 14px;
 }
 
-#setting-creation button, #campaign-creation button, #campaign-selection button {
+#setting-creation button, #campaign-creation button, #campaign-selection button, #session-creation button {
     align-self: center;
     width: 100%;
 }
 
-#campaign-selection select, #setting-selection select {
+#campaign-selection select, #setting-selection select, #session-selection select {
     width: 100%;
     font-size: 14px;
 }

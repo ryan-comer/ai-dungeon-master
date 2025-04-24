@@ -9,9 +9,9 @@ import { Setting } from "../models/Setting";
 import { Campaign } from "../models/Campaign";
 import { ILogger } from "../../utils/interfaces/ILogger";
 import { ITool } from "../../tools/interfaces/ITool";
+import { Session } from "../models/Session";
 
 interface IContextManager {
-    chatHistory: string[];
     textGenerationClient: ITextGenerationClient;
     imageGenerationClient: IImageGenerationClient;
     textToSpeechClient: ITextToSpeechClient;
@@ -20,8 +20,15 @@ interface IContextManager {
     tools: ITool[];
 
     loadContext(setting: Setting, campaign: Campaign): Promise<Context | null>;
-    startSession(): Promise<void>;
     sendUserMessage(message: string, chatData: ChatData): Promise<void>;
+
+    createSession(settingName: string, campaignName: string, sessionName: string): Promise<Session>;
+    startSession(settingName: string, campaignName: string, sessionName: string): Promise<void>;
+    getSessions(settingName: string, campaignName: string): Promise<Session[]>;
+    getSession(settingName: string, campaignName: string, name: string): Promise<Session | null>;
+
+    addChatHistory(message: string): Promise<void>;
+    getChatHistory(): Promise<string[]>;
 }
 
 export { IContextManager };

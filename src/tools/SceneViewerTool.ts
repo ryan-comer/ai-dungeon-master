@@ -13,7 +13,8 @@ class SceneViewerTool implements ITool {
 
     async run(contextManager: IContextManager): Promise<void> {
         const scenePrompt: string = await RepeatJsonGeneration(this.getScenePrompt(), async (repeatPrompt: string):Promise<string> => {
-            const response: string = await contextManager.textGenerationClient.generateText(repeatPrompt, contextManager.chatHistory);
+            const chatHistory: string[] = await contextManager.getChatHistory();
+            const response: string = await contextManager.textGenerationClient.generateText(repeatPrompt, chatHistory);
             return response;
         }, (response: string):boolean => {
             const responseJson: any = JSON.parse(response);

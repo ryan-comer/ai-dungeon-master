@@ -36,36 +36,31 @@ export class CampaignWindow extends Application {
 
         this.settingsList = html.find('#setting-list');
         this.campaignList = html.find('#campaign-list');
+        this.sessionList = html.find('#session-list');
         this.loadingIcon = html.find('#loading-icon');
         this.statusText = html.find('#status-text');
 
         this.createSettingButton = html.find('#create-setting-btn');
         this.createCampaignButton = html.find('#create-campaign-btn');
-        this.loadCampaignButton = html.find('#load-campaign-btn');
+        this.createSessionButton = html.find('#create-session-btn');
+
         this.startSessionButton = html.find('#start-session-btn');
+        this.sessionPrompt = html.find('#session-prompt');
 
         this.createSettingButton.click(this._onCreateSetting.bind(this));
         this.createCampaignButton.click(this._onCreateCampaign.bind(this));
-        this.loadCampaignButton.click(this._onLoadCampaign.bind(this));
+        this.createSessionButton.click(this._onCreateSession.bind(this));
         this.startSessionButton.click(this._onStartSession.bind(this));
 
         // Add change listener to settings list
         this.settingsList.change(this._onSettingChange.bind(this));
+        this.campaignList.change(this._onCampaignChange.bind(this));
+        this.sessionList.change(this._onSessionChange.bind(this));
 
         // Refesh settings and campaigns on load
-        this.refreshSettings().then(() => {
-            this.refreshCampaigns();
-        });
-
-        // Check if there's a loaded campaign
-        this.coreManager.getLoadedCampaign().then(loadedCampaign => {
-            console.log("Loaded campaign:", loadedCampaign);
-            if (loadedCampaign) {
-                document.getElementById('campaign-loaded').textContent = loadedCampaign.name;
-                document.getElementById('start-session-btn').classList.remove('hidden');
-            } else {
-                document.getElementById('start-session-btn').classList.add('hidden');
-            }
+        this.refreshSettings().then(async () => {
+            await this.refreshCampaigns();
+            await this.refreshSessions();
         });
     }
 
@@ -123,46 +118,74 @@ export class CampaignWindow extends Application {
         }
     }
 
-    async _onLoadCampaign(event) {
+    async _onCampaignChange(event) {
+        await this.refreshSessions();
+    }
+
+    async _onSettingChange(event) {
+        await this.refreshCampaigns();
+        await this.refreshSessions();
+    }
+
+    async _onSessionChange(event) {
+        // placeholder if needed for session selection changes
+    }
+
+    async _onCreateSession(event) {
         event.preventDefault();
-
-        const selectedCampaign = this.campaignList.val();
-        if (!selectedCampaign) {
-            ui.notifications.error("Please select a campaign to load.");
+        const sessionPrompt = this.sessionPrompt.val();
+        const createBtn = this.createSessionButton;
+        createBtn.prop('disabled', true);
+        const settingName = this.settingsList.val();
+        const campaignName = this.campaignList.val();
+        if (!settingName || !campaignName) {
+            ui.notifications.error("Please select a setting and campaign before creating a session.");
+            createBtn.prop('disabled', false);
             return;
         }
-
-        const selectedSetting = this.settingsList.val();
-        if (!selectedSetting) {
-            ui.notifications.error("Please select a setting before loading a campaign.");
+        if (sessionPrompt.length === 0) {
+            ui.notifications.error("Please enter a session prompt.");
+            createBtn.prop('disabled', false);
             return;
         }
-
+        console.log("Creating session:", settingName, campaignName, sessionPrompt);
+        this.logger.on("info", msg => this._setLoadingState(true, msg));
         try {
-            this._setLoadingState(true, "Loading campaign...");
-            const campaign = await this.coreManager.loadCampaign(selectedSetting, selectedCampaign);
-            document.getElementById('campaign-loaded').textContent = campaign.name;
-            document.getElementById('start-session-btn').classList.remove('hidden');
+            await this.coreManager.createSession(settingName, campaignName, sessionPrompt);
+            await this.refreshSessions();
+        } finally {
+            this._setLoadingState(false, "Idle");
+            createBtn.prop('disabled', false);
+        }
+    }
 
-            ui.notifications.info(`Campaign "${campaign.name}" loaded successfully.`);
+    async _onStartSession(event) {
+        event.preventDefault();
+        const settingName = this.settingsList.val();
+        const campaignName = this.campaignList.val();
+        const sessionName = this.sessionList.val();
+        
+        if (!settingName || !campaignName || !sessionName) {
+            ui.notifications.error("Please select a setting, campaign, and session before starting.");
+            return;
+        } else {
+            console.log("Starting session:", settingName, campaignName, sessionName);
+        }
+        
+        try {
+            this._setLoadingState(true, "Starting session...");
+            await this.coreManager.startSession(settingName, campaignName, sessionName);
+        } catch (error) {
+            ui.notifications.error("Failed to start session: " + error.message);
+            console.error(error);
         } finally {
             this._setLoadingState(false, "Idle");
         }
     }
 
-    async _onSettingChange(event) {
-        this.checkEnableCampaigns();
-        await this.refreshCampaigns();
-    }
-
-    checkEnableCampaigns() {
-        const selectedSetting = this.settingsList.val();
-        const isSettingSelected = !!selectedSetting;
-
-        // Enable or disable campaign options based on the selected setting
-        this.campaignList.prop('disabled', !isSettingSelected);
-        document.getElementById('campaign-prompt').disabled = !isSettingSelected;
-        document.getElementById('create-campaign-btn').disabled = !isSettingSelected;
+    _setLoadingState(isLoading, status) {
+        this.loadingIcon.toggleClass('hidden', !isLoading);
+        this.statusText.text(status);
     }
 
     async refreshSettings() {
@@ -179,8 +202,6 @@ export class CampaignWindow extends Application {
             const option = $(`<option value="${setting.name}">${setting.name}</option>`);
             this.settingsList.append(option);
         });
-
-        this.checkEnableCampaigns();
     }
 
     async refreshCampaigns() {
@@ -204,18 +225,22 @@ export class CampaignWindow extends Application {
             const option = $(`<option value="${campaign.name}">${campaign.name}</option>`);
             this.campaignList.append(option);
         });
+    }
 
-        if (campaigns.length > 0) {
-            this.loadCampaignButton.prop('disabled', false);
+    async refreshSessions() {
+        console.log("Refreshing sessions...");
+        const settingName = this.settingsList.val();
+        const campaignName = this.campaignList.val();
+        if (!settingName || !campaignName) {
+            this.sessionList.empty();
+            return;
         }
-    }
-
-    async _onStartSession() {
-        await this.coreManager.startSession();
-    }
-
-    _setLoadingState(isLoading, status) {
-        this.loadingIcon.toggleClass('hidden', !isLoading);
-        this.statusText.text(status);
+        const store = new FoundryStore();
+        const sessions = await store.getSessions(settingName, campaignName);
+        this.sessionList.empty();
+        sessions.forEach(s => {
+            const opt = $(`<option value="${s.name}">${s.name}</option>`);
+            this.sessionList.append(opt);
+        });
     }
 }

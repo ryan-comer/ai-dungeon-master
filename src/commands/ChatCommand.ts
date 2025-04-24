@@ -25,14 +25,16 @@ class ChatCommand implements ICommand {
         sendChatMessage(`${chatData.speaker.alias}: ${message}`); // Send the user message to the chat
 
         let response: string = "";
+        let chatHistory: string[] = await contextManager.getChatHistory(); // Get the chat history
         try {
-            response = await contextManager.textGenerationClient.generateText(message, contextManager.chatHistory);
+            response = await contextManager.textGenerationClient.generateText(message, chatHistory); // Generate the AI response
         } catch (error) {
             contextManager.logger.error("Error generating text:", error);
             return;
         }
-        contextManager.chatHistory.push(message); // Add user message to chat history
-        contextManager.chatHistory.push(response); // Add AI response to chat history
+
+        contextManager.addChatHistory(message);
+        contextManager.addChatHistory(response);
         sendChatMessage(response); // Send the AI response to the chat
 
         // Have the TTS speak the response
@@ -81,7 +83,8 @@ class ChatCommand implements ICommand {
         Do not respond with anything else
         `
 
-        const response: string = await contextManager.textGenerationClient.generateText(prompt, contextManager.chatHistory);
+        const chatHistory: string[] = await contextManager.getChatHistory(); // Get the chat history
+        const response: string = await contextManager.textGenerationClient.generateText(prompt, chatHistory);
 
         if (response.trim() === "None") {
             return null; // No tool should be fired

@@ -27,12 +27,14 @@ import { ITool } from "../tools/interfaces/ITool";
 import { CreateEncounterTool } from "../tools/CreateEncounterTool";
 import { SceneViewerTool } from "../tools/SceneViewerTool";
 import { ITextToSpeechClient } from "../generation/clients/interfaces/ITextToSpeechClient";
+import { Session } from "./models/Session";
 
 class CoreManager implements ICoreManager {
-    private campaignManager: ICampaignManager;
-    private contextManager: IContextManager
-    private entityManager: IEntityManager;
-    private encounterManager: IEncounterManager;
+    public campaignManager: ICampaignManager;
+    public contextManager: IContextManager
+    public entityManager: IEntityManager;
+    public encounterManager: IEncounterManager;
+    public fileStore: IFileStore;
 
     private logger: ILogger;
     private creationLock: Mutex; // Add a Mutex instance
@@ -48,6 +50,7 @@ class CoreManager implements ICoreManager {
     ];
 
     constructor(textGenerationClient: ITextGenerationClient, imageGenerationClient: IImageGenerationClient, textToSpeechClient: ITextToSpeechClient, fileStore: IFileStore, logger: ILogger=new Logger()) {
+        this.fileStore = fileStore;
         this.entityManager = new EntityManager(textGenerationClient, imageGenerationClient, fileStore);
         this.campaignManager = new CampaignManager(textGenerationClient, imageGenerationClient, fileStore, this.entityManager, logger);
         this.logger = logger;
@@ -116,33 +119,42 @@ class CoreManager implements ICoreManager {
         return this.campaignManager.getStoryline(settingName, campaignName, storylineName);
     }
 
-    async loadCampaign(settingName: string, campaignName: string): Promise<Campaign | null> {
+    async createSession(settingName: string, campaignName: string, sessionName: string): Promise<Session> {
+        logger.info("Creating a session...");
+        return this.contextManager.createSession(settingName, campaignName, sessionName); // Create a session
+    }
+
+    async getSession(settingName: string, campaignName: string, sessionName: string): Promise<Session | null> {
+        return this.contextManager.getSession(settingName, campaignName, sessionName); // Get a session
+    }
+
+    async getSessions(settingName: string, campaignName: string): Promise<Session[]> {
+        return this.contextManager.getSessions(settingName, campaignName); // Get all sessions
+    }
+
+    async startSession(settingName: string, campaignName: string, sessionName: string): Promise<void> {
         const campaign: Campaign | null = await this.campaignManager.getCampaign(settingName, campaignName);
         if (!campaign) {
             this.logger.error(`Campaign ${campaignName} not found in setting ${settingName}`);
-            return null;
+            return;
         }
         this.loadedCampaign = campaign; // Store the loaded campaign
 
         const setting: Setting | null = await this.campaignManager.getSetting(settingName);
         if (!setting) {
             this.logger.error(`Setting ${settingName} not found`);
-            return null;
+            return;
         }
         this.loadedSetting = setting; // Store the loaded setting
 
         this.logger.info("Loading campaign context...");
         this.contextManager.loadContext(setting, campaign);
         this.logger.info("Campaign context loaded.");
-        return this.loadedCampaign;
+        await this.contextManager.startSession(settingName, campaignName, sessionName); // Start a session
     }
 
     async getLoadedCampaign(): Promise<Campaign | null> {
         return this.loadedCampaign
-    }
-
-    async startSession(): Promise<void> {
-        this.contextManager.startSession(); // Start the session
     }
 
     // User sent a message to the AI Dungeon Master

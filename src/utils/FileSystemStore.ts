@@ -10,6 +10,7 @@ import { Location } from "../core/models/Location";
 import { Faction } from "../core/models/Faction";
 
 import { stripInvalidFilenameChars } from "./utils";
+import { Session } from "../core/models/Session";
 
 class FileSystemStore implements IFileStore {
 
@@ -17,6 +18,36 @@ class FileSystemStore implements IFileStore {
 
     constructor(basePath: string=__dirname) {
         this.basePath = basePath;
+    }
+
+    async getSessions(settingName: string, campaignName: string): Promise<Session[]> {
+        const sessionsDir = path.join(this.basePath, "./settings", stripInvalidFilenameChars(settingName), stripInvalidFilenameChars(campaignName), "sessions");
+        if (!fs.existsSync(sessionsDir)) {
+            return [];
+        }
+
+        // Get all directories in the sessions folder
+        const sessionDirs = fs.readdirSync(sessionsDir).filter(file => fs.statSync(path.join(sessionsDir, file)).isDirectory());
+
+        const sessions: Session[] = [];
+        for (const dir of sessionDirs) {
+            const sessionPath = path.join(sessionsDir, dir, "session.json");
+            if (fs.existsSync(sessionPath)) {
+                const sessionData = this.loadFile(sessionPath);
+                sessions.push(JSON.parse(sessionData) as Session);
+            }
+        }
+
+        return sessions;
+    }
+
+    async getSession(settingName: string, campaignName: string, sessionName: string): Promise<Session | null> {
+        const filePath = path.join(this.basePath, "./settings", stripInvalidFilenameChars(settingName), stripInvalidFilenameChars(campaignName), "sessions", stripInvalidFilenameChars(sessionName), "session.json");
+        if (!fs.existsSync(filePath)) {
+            return null;
+        }
+        const sessionData = this.loadFile(filePath);
+        return JSON.parse(sessionData) as Session;
     }
 
     async getSettings(): Promise<Setting[]> {
@@ -243,6 +274,11 @@ class FileSystemStore implements IFileStore {
             fs.mkdirSync(dir, { recursive: true });
         }
         await this.saveFile(filePath, JSON.stringify(entity, null, 2));
+    }
+
+    async saveSession(settingName: string, campaignName: string, sessionName: string, session: Session): Promise<void> {
+        const filePath = path.join(this.basePath, "./settings", stripInvalidFilenameChars(settingName), stripInvalidFilenameChars(campaignName), "sessions", stripInvalidFilenameChars(sessionName), "session.json");
+        await this.saveFile(filePath, JSON.stringify(session, null, 2));
     }
 
     async getSemanticIndex(setting: Setting, campaign: Campaign, entityType: EntityType): Promise<any | null> {

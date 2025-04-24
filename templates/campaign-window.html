@@ -11,15 +11,23 @@
 
     <div id="campaign-selection">
         <label for="campaign-list">Select a Campaign:</label>
-        <select id="campaign-list" disabled>
+        <select id="campaign-list">
             <!-- Options will be dynamically populated -->
         </select>
-        <button id="load-campaign-btn" disabled>Load Campaign</button>
-        <label for="campaign-loaded">Loaded Campaign:</label>
-        <div id="campaign-loaded">
-            None
-        </div>
-        <button id="start-session-btn" class="hidden">Start Session</button>
+    </div>
+
+    <div id="session-selection">
+        <label for="session-list">Select a Session:</label>
+        <select id="session-list">
+            <!-- Options will be dynamically populated -->
+        </select>
+        <button id="start-session-btn">Start Session</button>
+    </div>
+
+    <div id="session-creation">
+        <label for="session-prompt">Create a New Session:</label>
+        <input type="text" id="session-prompt" placeholder="Enter a prompt for the new session" />
+        <button id="create-session-btn">Create Session</button>
     </div>
 
     <hr />
@@ -32,8 +40,8 @@
     
     <div id="campaign-creation">
         <label for="campaign-prompt">Create a New Campaign:</label>
-        <input type="text" id="campaign-prompt" placeholder="Enter a prompt for the new campaign" disabled />
-        <button id="create-campaign-btn" disabled>Create Campaign</button>
+        <input type="text" id="campaign-prompt" placeholder="Enter a prompt for the new campaign" />
+        <button id="create-campaign-btn">Create Campaign</button>
     </div>
 
     <div id="loading-container">
