@@ -292,7 +292,7 @@ class CreateEncounterTool implements ITool {
 
     // Create a scene for the encounter in FoundryVTT
     async createEncounterScene(encounter: Encounter, contextManager: IContextManager, baseEncounterPath: string, backgroundWidth: number, backgroundHeight: number): Promise<string> {
-        const newPrompt: string = `A 2D DnD battlemap with a top-down viewpoint. POV is high up looking straight down (birds-eye view) that has the following description: ${encounter.battlemapPrompt}`;
+        const newPrompt: string = `RPGmap, Top down view. Birds eye view. From above. ${encounter.battlemapPrompt}`;
         const imageData = await contextManager.imageGenerationClient.generateImage(newPrompt, {
             width: backgroundWidth,
             height: backgroundHeight

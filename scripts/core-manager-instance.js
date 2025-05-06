@@ -14,8 +14,8 @@ export function getCoreManager() {
         const logger = new Logger();
         coreManagerInstance = new CoreManager(
             new GoogleClient(googleApiKey),
-            //new ForgeClient(),
-            new HidreamClient(),
+            new ForgeClient(),
+            //new HidreamClient(),
             new DiscordSpeechClient(),
             new FoundryStore(),
             logger

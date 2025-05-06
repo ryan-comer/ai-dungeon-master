@@ -40,7 +40,7 @@ class ForgeClient implements IImageGenerationClient {
     async generateImage(prompt: string, optionsOverride?: any): Promise<string> {
         try {
             const request:TextToImageRequest = {
-                prompt: prompt,
+                prompt: `<lora:rpgMapsDora_v5:1> RPGmap, ${prompt}`,
                 steps: 20,
                 width: 1024,
                 height: 1024,
