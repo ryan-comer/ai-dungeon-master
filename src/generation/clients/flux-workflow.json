@@ -1,0 +1,885 @@
+{
+  "id": "6f573234-cfe9-4c7f-9d86-bf1213301507",
+  "revision": 0,
+  "last_node_id": 66,
+  "last_link_id": 111,
+  "nodes": [
+    {
+      "id": 65,
+      "type": "FluxGuidance",
+      "pos": [
+        350,
+        580
+      ],
+      "size": [
+        384.5007629394531,
+        58
+      ],
+      "flags": {},
+      "order": 9,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "conditioning",
+          "type": "CONDITIONING",
+          "link": 105
+        }
+      ],
+      "outputs": [
+        {
+          "name": "CONDITIONING",
+          "type": "CONDITIONING",
+          "slot_index": 0,
+          "links": [
+            107
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.3.29",
+        "Node name for S&R": "FluxGuidance"
+      },
+      "widgets_values": [
+        3.5
+      ]
+    },
+    {
+      "id": 13,
+      "type": "SamplerCustomAdvanced",
+      "pos": [
+        1120,
+        340
+      ],
+      "size": [
+        322.749755859375,
+        315.4848937988281
+      ],
+      "flags": {},
+      "order": 13,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "noise",
+          "type": "NOISE",
+          "link": 86
+        },
+        {
+          "name": "guider",
+          "type": "GUIDER",
+          "link": 30
+        },
+        {
+          "name": "sampler",
+          "type": "SAMPLER",
+          "link": 19
+        },
+        {
+          "name": "sigmas",
+          "type": "SIGMAS",
+          "link": 60
+        },
+        {
+          "name": "latent_image",
+          "type": "LATENT",
+          "link": 104
+        }
+      ],
+      "outputs": [
+        {
+          "name": "output",
+          "type": "LATENT",
+          "slot_index": 0,
+          "links": [
+            24
+          ]
+        },
+        {
+          "name": "denoised_output",
+          "type": "LATENT",
+          "links": null
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.3.29",
+        "Node name for S&R": "SamplerCustomAdvanced"
+      },
+      "widgets_values": [],
+      "color": "#323",
+      "bgcolor": "#535"
+    },
+    {
+      "id": 8,
+      "type": "VAEDecode",
+      "pos": [
+        750,
+        360
+      ],
+      "size": [
+        344.3794250488281,
+        79.94837951660156
+      ],
+      "flags": {},
+      "order": 14,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "samples",
+          "type": "LATENT",
+          "link": 24
+        },
+        {
+          "name": "vae",
+          "type": "VAE",
+          "link": 12
+        }
+      ],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "slot_index": 0,
+          "links": [
+            93
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.3.29",
+        "Node name for S&R": "VAEDecode"
+      },
+      "widgets_values": [],
+      "color": "#223",
+      "bgcolor": "#335"
+    },
+    {
+      "id": 22,
+      "type": "BasicGuider",
+      "pos": [
+        360,
+        480
+      ],
+      "size": [
+        377.0873718261719,
+        52.784481048583984
+      ],
+      "flags": {},
+      "order": 11,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "link": 110
+        },
+        {
+          "name": "conditioning",
+          "type": "CONDITIONING",
+          "link": 107
+        }
+      ],
+      "outputs": [
+        {
+          "name": "GUIDER",
+          "type": "GUIDER",
+          "slot_index": 0,
+          "links": [
+            30
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.3.29",
+        "Node name for S&R": "BasicGuider"
+      },
+      "widgets_values": [],
+      "color": "#223",
+      "bgcolor": "#335"
+    },
+    {
+      "id": 64,
+      "type": "ModelSamplingFlux",
+      "pos": [
+        350,
+        260
+      ],
+      "size": [
+        384.9222106933594,
+        185.13111877441406
+      ],
+      "flags": {},
+      "order": 8,
+      "mode": 0,
+      "inputs": [
+        {
+          "label": "model",
+          "name": "model",
+          "type": "MODEL",
+          "link": 109
+        },
+        {
+          "label": "width",
+          "name": "width",
+          "type": "INT",
+          "widget": {
+            "name": "width"
+          },
+          "link": 102
+        },
+        {
+          "label": "height",
+          "name": "height",
+          "type": "INT",
+          "widget": {
+            "name": "height"
+          },
+          "link": 103
+        }
+      ],
+      "outputs": [
+        {
+          "label": "MODEL",
+          "name": "MODEL",
+          "type": "MODEL",
+          "slot_index": 0,
+          "links": [
+            110,
+            111
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.3.29",
+        "Node name for S&R": "ModelSamplingFlux"
+      },
+      "widgets_values": [
+        1.15,
+        0.5,
+        1024,
+        1024
+      ]
+    },
+    {
+      "id": 16,
+      "type": "KSamplerSelect",
+      "pos": [
+        750,
+        480
+      ],
+      "size": [
+        350.7186279296875,
+        63.45407485961914
+      ],
+      "flags": {},
+      "order": 0,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "SAMPLER",
+          "type": "SAMPLER",
+          "links": [
+            19
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.3.29",
+        "Node name for S&R": "KSamplerSelect"
+      },
+      "widgets_values": [
+        "euler"
+      ],
+      "color": "#323",
+      "bgcolor": "#535"
+    },
+    {
+      "id": 17,
+      "type": "BasicScheduler",
+      "pos": [
+        350,
+        110
+      ],
+      "size": [
+        381.9222106933594,
+        113.91061401367188
+      ],
+      "flags": {},
+      "order": 10,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "link": 111
+        }
+      ],
+      "outputs": [
+        {
+          "name": "SIGMAS",
+          "type": "SIGMAS",
+          "slot_index": 0,
+          "links": [
+            59
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.3.29",
+        "Node name for S&R": "BasicScheduler"
+      },
+      "widgets_values": [
+        "normal",
+        20,
+        1
+      ],
+      "color": "#323",
+      "bgcolor": "#535"
+    },
+    {
+      "id": 62,
+      "type": "CR SDXL Aspect Ratio",
+      "pos": [
+        20,
+        340
+      ],
+      "size": [
+        315,
+        278
+      ],
+      "flags": {},
+      "order": 1,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "width",
+          "type": "INT",
+          "slot_index": 0,
+          "links": [
+            102
+          ]
+        },
+        {
+          "name": "height",
+          "type": "INT",
+          "slot_index": 1,
+          "links": [
+            103
+          ]
+        },
+        {
+          "name": "upscale_factor",
+          "type": "FLOAT",
+          "links": null
+        },
+        {
+          "name": "batch_size",
+          "type": "INT",
+          "links": null
+        },
+        {
+          "name": "empty_latent",
+          "type": "LATENT",
+          "slot_index": 4,
+          "links": [
+            104
+          ]
+        },
+        {
+          "name": "show_help",
+          "type": "STRING",
+          "links": null
+        }
+      ],
+      "properties": {
+        "cnr_id": "ComfyUI_Comfyroll_CustomNodes",
+        "ver": "d78b780ae43fcf8c6b7c6505e6ffb4584281ceca",
+        "Node name for S&R": "CR SDXL Aspect Ratio"
+      },
+      "widgets_values": [
+        1024,
+        1024,
+        "1:1 square 1024x1024",
+        "Off",
+        1,
+        1
+      ]
+    },
+    {
+      "id": 50,
+      "type": "RandomNoise",
+      "pos": [
+        750,
+        580
+      ],
+      "size": [
+        346.55340576171875,
+        82
+      ],
+      "flags": {},
+      "order": 2,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "NOISE",
+          "type": "NOISE",
+          "links": [
+            86
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.3.29",
+        "Node name for S&R": "RandomNoise"
+      },
+      "widgets_values": [
+        1009539620249012,
+        "randomize"
+      ],
+      "color": "#432",
+      "bgcolor": "#653"
+    },
+    {
+      "id": 38,
+      "type": "SplitSigmas",
+      "pos": [
+        750,
+        120
+      ],
+      "size": [
+        339.8304443359375,
+        78
+      ],
+      "flags": {},
+      "order": 12,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "sigmas",
+          "type": "SIGMAS",
+          "link": 59
+        }
+      ],
+      "outputs": [
+        {
+          "name": "high_sigmas",
+          "type": "SIGMAS",
+          "slot_index": 0,
+          "links": []
+        },
+        {
+          "name": "low_sigmas",
+          "type": "SIGMAS",
+          "slot_index": 1,
+          "links": [
+            60
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.3.29",
+        "Node name for S&R": "SplitSigmas"
+      },
+      "widgets_values": [
+        0
+      ],
+      "color": "#223",
+      "bgcolor": "#335"
+    },
+    {
+      "id": 55,
+      "type": "SaveImage",
+      "pos": [
+        1469,
+        333
+      ],
+      "size": [
+        435.2184143066406,
+        501.4060363769531
+      ],
+      "flags": {},
+      "order": 15,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "link": 93
+        }
+      ],
+      "outputs": [],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.3.29"
+      },
+      "widgets_values": [
+        "ComfyUI"
+      ]
+    },
+    {
+      "id": 12,
+      "type": "UNETLoader",
+      "pos": [
+        20,
+        100
+      ],
+      "size": [
+        315,
+        82
+      ],
+      "flags": {},
+      "order": 3,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "MODEL",
+          "type": "MODEL",
+          "slot_index": 0,
+          "links": [
+            108
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.3.29",
+        "Node name for S&R": "UNETLoader"
+      },
+      "widgets_values": [
+        "FLUX1\\flux_dev_fp8_scaled_diffusion_model.safetensors",
+        "default"
+      ],
+      "color": "#223",
+      "bgcolor": "#335"
+    },
+    {
+      "id": 66,
+      "type": "LoraLoaderModelOnly",
+      "pos": [
+        20,
+        220
+      ],
+      "size": [
+        315,
+        82
+      ],
+      "flags": {},
+      "order": 6,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "link": 108
+        }
+      ],
+      "outputs": [
+        {
+          "name": "MODEL",
+          "type": "MODEL",
+          "slot_index": 0,
+          "links": [
+            109
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.3.29",
+        "Node name for S&R": "LoraLoaderModelOnly"
+      },
+      "widgets_values": [
+        "rpgMapsDora_v5.safetensors",
+        0.85
+      ]
+    },
+    {
+      "id": 11,
+      "type": "DualCLIPLoader",
+      "pos": [
+        20,
+        670
+      ],
+      "size": [
+        315,
+        130
+      ],
+      "flags": {},
+      "order": 4,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "CLIP",
+          "type": "CLIP",
+          "slot_index": 0,
+          "links": [
+            10
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.3.29",
+        "Node name for S&R": "DualCLIPLoader"
+      },
+      "widgets_values": [
+        "t5\\t5xxl_fp8_e4m3fn.safetensors",
+        "clip_l.safetensors",
+        "flux",
+        "default"
+      ],
+      "color": "#223",
+      "bgcolor": "#335"
+    },
+    {
+      "id": 10,
+      "type": "VAELoader",
+      "pos": [
+        750,
+        250
+      ],
+      "size": [
+        337.2054443359375,
+        76.07710266113281
+      ],
+      "flags": {},
+      "order": 5,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "VAE",
+          "type": "VAE",
+          "slot_index": 0,
+          "links": [
+            12
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.3.29",
+        "Node name for S&R": "VAELoader"
+      },
+      "widgets_values": [
+        "FLUX1\\ae.safetensors"
+      ],
+      "color": "#223",
+      "bgcolor": "#335"
+    },
+    {
+      "id": 6,
+      "type": "CLIPTextEncode",
+      "pos": [
+        350,
+        680
+      ],
+      "size": [
+        395.4771423339844,
+        277.2570495605469
+      ],
+      "flags": {},
+      "order": 7,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "clip",
+          "type": "CLIP",
+          "link": 10
+        }
+      ],
+      "outputs": [
+        {
+          "name": "CONDITIONING",
+          "type": "CONDITIONING",
+          "slot_index": 0,
+          "links": [
+            105
+          ]
+        }
+      ],
+      "title": "CLIP Text Encode (Positive Prompt)",
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.3.29",
+        "Node name for S&R": "CLIPTextEncode"
+      },
+      "widgets_values": [
+        "RPGmap, Top down view. Birds eye view. From above.  Fantasy style battle map depicting the tranquil shore of a mystical lake, with a weathered wooden pier jutting out into the calm waters. The shoreline is dotted with smooth stones and patches of vibrant grass, while ancient trees cast soft shadows across the scene\n"
+      ],
+      "color": "#232",
+      "bgcolor": "#353"
+    }
+  ],
+  "links": [
+    [
+      10,
+      11,
+      0,
+      6,
+      0,
+      "CLIP"
+    ],
+    [
+      12,
+      10,
+      0,
+      8,
+      1,
+      "VAE"
+    ],
+    [
+      19,
+      16,
+      0,
+      13,
+      2,
+      "SAMPLER"
+    ],
+    [
+      24,
+      13,
+      0,
+      8,
+      0,
+      "LATENT"
+    ],
+    [
+      30,
+      22,
+      0,
+      13,
+      1,
+      "GUIDER"
+    ],
+    [
+      59,
+      17,
+      0,
+      38,
+      0,
+      "SIGMAS"
+    ],
+    [
+      60,
+      38,
+      1,
+      13,
+      3,
+      "SIGMAS"
+    ],
+    [
+      86,
+      50,
+      0,
+      13,
+      0,
+      "NOISE"
+    ],
+    [
+      93,
+      8,
+      0,
+      55,
+      0,
+      "IMAGE"
+    ],
+    [
+      102,
+      62,
+      0,
+      64,
+      1,
+      "INT"
+    ],
+    [
+      103,
+      62,
+      1,
+      64,
+      2,
+      "INT"
+    ],
+    [
+      104,
+      62,
+      4,
+      13,
+      4,
+      "LATENT"
+    ],
+    [
+      105,
+      6,
+      0,
+      65,
+      0,
+      "CONDITIONING"
+    ],
+    [
+      107,
+      65,
+      0,
+      22,
+      1,
+      "CONDITIONING"
+    ],
+    [
+      108,
+      12,
+      0,
+      66,
+      0,
+      "MODEL"
+    ],
+    [
+      109,
+      66,
+      0,
+      64,
+      0,
+      "MODEL"
+    ],
+    [
+      110,
+      64,
+      0,
+      22,
+      0,
+      "MODEL"
+    ],
+    [
+      111,
+      64,
+      0,
+      17,
+      0,
+      "MODEL"
+    ]
+  ],
+  "groups": [],
+  "config": {},
+  "extra": {
+    "ds": {
+      "scale": 0.9090909090909091,
+      "offset": [
+        357.20410081469123,
+        46.54612578582812
+      ]
+    },
+    "frontendVersion": "1.17.11"
+  },
+  "version": 0.4
+}

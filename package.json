@@ -22,7 +22,8 @@
     "openai": "^4.89.0",
     "path-browserify": "^1.0.1",
     "tsc-alias": "^1.8.12",
-    "tsx": "^4.19.3"
+    "tsx": "^4.19.3",
+    "typescript": "^5.8.3"
   },
   "devDependencies": {
     "@league-of-foundry-developers/foundry-vtt-types": "^12.331.3-beta",

@@ -14,7 +14,6 @@ import { IImageGenerationClient } from "../generation/clients/interfaces/IImageG
 import { IFileStore } from "../utils/interfaces/IFileStore";
 import { ILogger } from "../utils/interfaces/ILogger";
 import { Logger } from "../utils/Logger";
-import { sendChatMessage } from "../utils/utils";
 
 import { Setting } from "./models/Setting";
 import { Campaign } from "./models/Campaign";
@@ -24,8 +23,6 @@ import { Mutex } from "async-mutex"; // Add this import for the lock mechanism
 import { EventEmitter } from "events"; // Add this import for event handling
 
 import { ITool } from "../tools/interfaces/ITool";
-import { CreateEncounterTool } from "../tools/CreateEncounterTool";
-import { SceneViewerTool } from "../tools/SceneViewerTool";
 import { ITextToSpeechClient } from "../generation/clients/interfaces/ITextToSpeechClient";
 import { Session } from "./models/Session";
 
@@ -39,6 +36,7 @@ class CoreManager implements ICoreManager {
     private logger: ILogger;
     private creationLock: Mutex; // Add a Mutex instance
     private eventEmitter: EventEmitter; // Add an EventEmitter instance
+    private userMessageLock: Mutex = new Mutex(); // Add a lock for userMessage
 
     private loadedCampaign: Campaign | null = null; // Store the loaded campaign
     private loadedSetting: Setting | null = null; // Store the loaded setting
@@ -148,9 +146,8 @@ class CoreManager implements ICoreManager {
         this.loadedSetting = setting; // Store the loaded setting
 
         this.logger.info("Loading campaign context...");
-        this.contextManager.loadContext(setting, campaign);
         this.logger.info("Campaign context loaded.");
-        await this.contextManager.startSession(settingName, campaignName, sessionName); // Start a session
+        await this.contextManager.startSession(setting, campaign, sessionName); // Start a session
     }
 
     async getLoadedCampaign(): Promise<Campaign | null> {
@@ -159,9 +156,20 @@ class CoreManager implements ICoreManager {
 
     // User sent a message to the AI Dungeon Master
     async userMessage(message: string, chatData: ChatData): Promise<void> {
-        this.logger.info("User message received:");
-        console.log("Chat data:", chatData);
-        await this.contextManager.sendUserMessage(message, chatData);
+        // Try to acquire the lock non-blocking
+        if (!this.userMessageLock.isLocked()) {
+            const release = await this.userMessageLock.acquire();
+            try {
+                this.logger.info("User message received:");
+                console.log("Chat data:", chatData);
+                await this.contextManager.sendUserMessage(message, chatData);
+            } finally {
+                release();
+            }
+        } else {
+            this.logger.warn("userMessage is already being processed. Skipping this call.");
+            return;
+        }
     }
 
 }

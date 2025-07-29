@@ -22,18 +22,22 @@ class ChatCommand implements ICommand {
             return;
         }
 
-        sendChatMessage(`${chatData.speaker.alias}: ${message}`); // Send the user message to the chat
+        const newMessage: string = `${chatData.speaker.alias}: ${message}` 
+        sendChatMessage(newMessage); // Send the user message to the chat
 
         let response: string = "";
         let chatHistory: string[] = await contextManager.getChatHistory(); // Get the chat history
         try {
-            response = await contextManager.textGenerationClient.generateText(message, chatHistory); // Generate the AI response
+            response = await contextManager.textGenerationClient.generateText(newMessage, chatHistory); // Generate the AI response
         } catch (error) {
             contextManager.logger.error("Error generating text:", error);
             return;
         }
 
-        contextManager.addChatHistory(message);
+        // Remove the asterisks from the response
+        response = response.replace(/\*\*(.*?)\*\*/g, "$1");
+
+        contextManager.addChatHistory(newMessage);
         contextManager.addChatHistory(response);
         sendChatMessage(response); // Send the AI response to the chat
 

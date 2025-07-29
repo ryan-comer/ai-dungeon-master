@@ -10,6 +10,7 @@ import { Campaign } from "../models/Campaign";
 import { ILogger } from "../../utils/interfaces/ILogger";
 import { ITool } from "../../tools/interfaces/ITool";
 import { Session } from "../models/Session";
+import { Player } from "../models/Player";
 
 interface IContextManager {
     textGenerationClient: ITextGenerationClient;
@@ -19,13 +20,15 @@ interface IContextManager {
     logger: ILogger
     tools: ITool[];
 
-    loadContext(setting: Setting, campaign: Campaign): Promise<Context | null>;
+    loadContext(setting: Setting, campaign: Campaign, session: Session): Promise<Context | null>;
     sendUserMessage(message: string, chatData: ChatData): Promise<void>;
 
     createSession(settingName: string, campaignName: string, sessionName: string): Promise<Session>;
-    startSession(settingName: string, campaignName: string, sessionName: string): Promise<void>;
+    startSession(setting: Setting, campaign: Campaign, sessionName: string): Promise<void>;
     getSessions(settingName: string, campaignName: string): Promise<Session[]>;
     getSession(settingName: string, campaignName: string, name: string): Promise<Session | null>;
+
+    getPlayers(): Promise<Player[]>;
 
     addChatHistory(message: string): Promise<void>;
     getChatHistory(): Promise<string[]>;

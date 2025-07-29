@@ -19,7 +19,7 @@ class CreateEncounterTool implements ITool {
     async run(contextManager: IContextManager): Promise<void> {
         const chatHistory: string[] = await contextManager.getChatHistory();
         const context: string = chatHistory.join("\n");
-        const prompt: string = this.getEncounterPrompt(context);
+        const prompt: string = await this.getEncounterPrompt(contextManager, context);
         
         // Get the Encounter object
         const result: string = await RepeatJsonGeneration(prompt, async (repeatPrompt: string): Promise<string> => {
@@ -362,7 +362,11 @@ class CreateEncounterTool implements ITool {
         }
     }
 
-    getEncounterPrompt(context: string): string {
+    async getEncounterPrompt(contextManager: IContextManager, context: string): Promise<string> {
+        // Get the players in the encounter
+        const players: any[] = await contextManager.getPlayers();
+
+
         return `
         I want you to create an encounter for my players using the DND 5E rules.
         I will give you the context the players are in, and you will create an encounter for them.
@@ -376,6 +380,9 @@ class CreateEncounterTool implements ITool {
         Make sure the encounter is relevant to the context that I give you.
 
         The context is: ${context}
+
+        The players that are in the encounter are:
+        ${JSON.stringify(players, null, 2)}
 
         The response should have the following JSON format:
 

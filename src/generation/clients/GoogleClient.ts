@@ -6,11 +6,13 @@ class GoogleClient implements ITextGenerationClient {
     private genAI: GoogleGenAI;
     private apiKey: string;
     private model: string;
+    private options: any;
 
-    constructor(apiKey: string, model: string = "gemini-2.5-flash-preview-04-17") {
+    constructor(apiKey: string, model: string = "gemini-2.5-flash-preview-04-17", options?: any) {
         this.apiKey = apiKey;
         this.genAI = new GoogleGenAI({apiKey});
         this.model = model;
+        this.options = options || {};
     }
 
     async generateText(prompt: string, chatHistory?: string[], optionsOverride?: any, image?: string): Promise<string> {
@@ -40,12 +42,24 @@ class GoogleClient implements ITextGenerationClient {
             });
         }
 
-        const response = await chat.sendMessage({
-            message: message,
-            config: {
-                ...optionsOverride
+        let retryCount: number = optionsOverride?.retryCount || 3;
+        let response: any;
+        while (retryCount > 0) {
+            try {
+                response = await chat.sendMessage({
+                    message: message,
+                    config: {
+                        ...optionsOverride
+                    }
+                });
+            } catch (error) {
+                console.error(`Error generating text: ${error}`);
+                retryCount--;
+                continue;
             }
-        });
+
+            break;
+        }
 
         if (!response.candidates || response.candidates.length === 0 || !response.candidates[0].content 
             || !response.candidates[0].content.parts || response.candidates[0].content.parts.length === 0 

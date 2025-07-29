@@ -4,7 +4,6 @@ import { IEntityManager } from "./interfaces/IEntityManager";
 import { Context } from "./models/Context";
 import { Setting } from "./models/Setting";
 import { Campaign } from "./models/Campaign";
-import { Storyline } from "./models/Storyline";
 import { Character } from "./models/Character";
 import { Location } from "./models/Location";
 import { Faction } from "./models/Faction";
@@ -18,8 +17,6 @@ import { IImageGenerationClient } from "../generation/clients/interfaces/IImageG
 import { ITextToSpeechClient } from "../generation/clients/interfaces/ITextToSpeechClient";
 import { sendChatMessage } from "../utils/utils";
 import { ITool } from "../tools/interfaces/ITool";
-import { SceneViewerTool } from "../tools/SceneViewerTool";
-import { CreateEncounterTool } from "../tools/CreateEncounterTool";
 
 import { ICommand } from "../commands/interfaces/ICommand";
 import { ChatCommand } from "../commands/ChatCommand";
@@ -29,6 +26,7 @@ import { Player } from "./models/Player";
 import { Session } from "./models/Session";
 
 import { stripInvalidFilenameChars } from "../utils/utils";
+import { cons } from "fp-ts/lib/ReadonlyNonEmptyArray";
 
 class ContextManager implements IContextManager {
 
@@ -43,7 +41,6 @@ class ContextManager implements IContextManager {
 
     private loadedCampaign: Campaign | null = null; // Store the loaded campaign
     private loadedSetting: Setting | null = null; // Store the loaded setting
-    private currentStoryline: Storyline | null = null; // Store the current storyline
     private commands: {name: string, command: ICommand}[] = []; // Store the commands
 
     private currentSession: Session | null = null; // Store the current session
@@ -90,6 +87,14 @@ class ContextManager implements IContextManager {
                     wisdom: actor.system.abilities.wis.value,
                     charisma: actor.system.abilities.cha.value
                 },
+                details: {
+                    biography: actor.system.details.biography.value,
+                    ideals: actor.system.details.ideal,
+                    bonds: actor.system.details.bond,
+                    flaws: actor.system.details.flaw,
+                    personalityTraits: actor.system.details.trait,
+                    appearance: actor.system.details.appearance
+                },
                 ac: actor.system.attributes.ac.value,
                 hp: actor.system.attributes.hp.max,
             };
@@ -98,19 +103,41 @@ class ContextManager implements IContextManager {
         return players;
     }
 
-    async loadContext(setting: Setting, campaign: Campaign): Promise<Context | null> {
+    async loadContext(setting: Setting, campaign: Campaign, session: Session): Promise<Context | null> {
         // Implement the logic to load the context based on settingName and campaignName
         // For now, returning null as a placeholder
         this.loadedSetting = setting;
         this.loadedCampaign = campaign;
 
-        // Get the current storyline from the campaign
-        const storylineName: string = campaign.milestones[0].name;
-        this.currentStoryline = await this.fileStore.getStoryline(
-            setting.name,
-            campaign.name,
-            storylineName
-        )
+        const prompt: string = await this.getInitialPrompt();
+
+        // Check if we need to get the initial prompt
+        if (session.chatHistory.length === 0) {
+            console.log("Adding initial prompt to chat history...");
+            session.chatHistory.push(prompt); // Add initial prompt to chat history
+            const response: string = await this.textGenerationClient.generateText(
+                prompt
+            );
+
+            session.chatHistory.push(response); // Add AI response to chat history
+            sendChatMessage(response);
+
+            // Send to TTS
+            if (this.textToSpeechClient) {
+                try {
+                    await this.textToSpeechClient.speak(response);
+                } catch (error) {
+                    this.logger.error("Error speaking text:", error);
+                }
+            }
+
+            this.logger.info(`Started session: ${this.loadedCampaign.name}`);
+        } else {
+            // Swap the first message to refresh the initial context
+            session.chatHistory[0] = prompt;
+        }
+
+        await this.fileStore.saveSession(this.loadedSetting.name, this.loadedCampaign.name, session.name, session); // Save the session with updated chat history
 
         return null;
     }
@@ -128,45 +155,46 @@ class ContextManager implements IContextManager {
         return session;
     }
 
-    async startSession(settingName: string, campaignName: string, sessionName: string): Promise<void> {
-        if (!this.loadedSetting || !this.loadedCampaign) {
-            this.logger.error("No loaded setting or campaign to start.");
-            return;
-        }
-
-        const session: Session | null = await this.getSession(settingName, campaignName, sessionName);
+    async startSession(setting: Setting, campaign: Campaign, sessionName: string): Promise<void> {
+        const session: Session | null = await this.getSession(setting.name, campaign.name, sessionName);
 
         if (!session) {
-            this.logger.error(`Session ${sessionName} not found in campaign ${campaignName}`);
+            this.logger.error(`Session ${sessionName} not found in campaign ${campaign.name}`);
             return;
         }
         this.currentSession = session; // Set the current session
 
         // Load the context for the session
-        await this.loadContext(this.loadedSetting, this.loadedCampaign);
+        console.log("Loaded context:", this.currentSession);
+        await this.loadContext(setting, campaign, this.currentSession);
+        console.log("Loaded context:", this.currentSession);
 
-        // Check if we need to get the initial prompt
-        if (this.currentSession.chatHistory.length === 0) {
-            const prompt: string = await this.getInitialPrompt();
-            const response: string = await this.textGenerationClient.generateText(
-                prompt
-            );
+        // Update the session indices
+        if (this.currentSession.sessionIndices.length > 0 && this.currentSession.sessionIndices[this.currentSession.sessionIndices.length - 1] !== this.currentSession.chatHistory.length - 1) {
+            console.log("Adding last index to session indices...");
+            this.currentSession.sessionIndices.push(this.currentSession.chatHistory.length - 1); // Add the last index
+        }
 
-            this.currentSession.chatHistory.push(prompt); // Add initial prompt to chat history
-            this.currentSession.chatHistory.push(response); // Add AI response to chat history
-            sendChatMessage(response);
+        const lastSessionSummary: string = await this.getSessionSummary(this.currentSession);
+        if (lastSessionSummary) {
+            sendChatMessage(lastSessionSummary);
 
             // Send to TTS
             if (this.textToSpeechClient) {
                 try {
-                    await this.textToSpeechClient.speak(response);
+                    await this.textToSpeechClient.speak(lastSessionSummary);
                 } catch (error) {
                     this.logger.error("Error speaking text:", error);
                 }
             }
-
-            this.logger.info(`Started session: ${this.loadedCampaign.name}`);
         }
+
+        if (this.currentSession.sessionIndices.length === 0) {
+            console.log("Adding first index to session indices...");
+            this.currentSession.sessionIndices.push(1); // Add the first index
+        }
+        console.log("Context loaded:", this.currentSession);
+        await this.fileStore.saveSession(setting.name, campaign.name, this.currentSession.name, session); // Save the session with updated chat history
     }
 
     async getSessions(settingName: string, campaignName: string): Promise<Session[]> {
@@ -213,6 +241,30 @@ class ContextManager implements IContextManager {
         }
 
         return this.currentSession.chatHistory; // Return the chat history of the current session
+    }
+
+    async getSessionSummary(session: Session): Promise<string> {
+        // Check if we need to summarize what happened in the last session
+        if (session.sessionIndices.length > 0) {
+            let startIndex: number
+            let endIndex: number
+
+            startIndex = session.sessionIndices[session.sessionIndices.length - 2];
+            endIndex = session.sessionIndices[session.sessionIndices.length - 1];
+
+            const sessionText: string = session.chatHistory.slice(startIndex, endIndex).join("\n");
+            const summaryPrompt: string = `
+            The following is the chat history for a dnd session.
+            Summarize what happened in the last session and provide a brief overview of the events, characters, and locations involved.
+            Only reply with the summary and do not include any system messages or instructions.
+            The chat history is as follows:
+            ${sessionText}
+            `;
+            const summary: string = await this.textGenerationClient.generateText(summaryPrompt);
+            return summary;
+        } else {
+            return "";
+        }
     }
 
     // Get the initial prompt for the AI DM
@@ -282,6 +334,9 @@ class ContextManager implements IContextManager {
         You can also add plot twists and surprises to keep the players engaged.
         It's good to create challenges and obstacles for the players to overcome, but make sure to give them opportunities to succeed.
 
+        When replying to the players, be as concise as possible.
+        It's okay to add a lot of detail when describing a scene, but not all responses need to be long.
+
         I will provide you with the setting, campaign, and the storyline to get started.
 
         This is the setting for the game:
@@ -298,9 +353,6 @@ class ContextManager implements IContextManager {
 
         These are all the factions for the game:
         ${JSON.stringify(factions, null, 2)}
-
-        This is the current storyline for the game:
-        ${JSON.stringify(this.currentStoryline, null, 2)}
 
         These are the players in the game:
         ${JSON.stringify(players, null, 2)}

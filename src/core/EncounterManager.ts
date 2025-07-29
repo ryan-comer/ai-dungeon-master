@@ -121,7 +121,13 @@ class EncounterManager implements IEncounterManager {
         console.log("Update Options: ", updateOptions)
 
         if (this.lastMoveMarker != null && this.lastMoveMarker != undefined) {
-            await canvas?.scene?.deleteEmbeddedDocuments("Drawing", [this.lastMoveMarker.id]);
+            try {
+                await canvas?.scene?.deleteEmbeddedDocuments("Drawing", [this.lastMoveMarker.id]);
+            } catch (error) {
+                console.error("Error deleting last move marker:", error);
+            }
+
+            this.lastMoveMarker = null;
         }
 
         const turn: number = updateData.turn;
