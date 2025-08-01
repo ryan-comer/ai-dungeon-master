@@ -1,8 +1,10 @@
 import { ITool } from "./interfaces/ITool";
 
 import { IContextManager } from "../core/interfaces/IContextManager";
-import { RepeatJsonGeneration } from "../generation/clients/utils";
-import { Encounter, EncounterCodec } from "../core/models/Encounter";
+// import RepeatJsonGeneration removed; using structured output instead
+import { Encounter } from "../core/models/Encounter";
+import { EncounterSchema } from "../core/models/google/EncounterSchema";
+import { Schema, Type } from '@google/genai';
 
 import { stripInvalidFilenameChars } from "../utils/utils";
 import { max } from "fp-ts/lib/ReadonlyNonEmptyArray";
@@ -20,26 +22,17 @@ class CreateEncounterTool implements ITool {
         const chatHistory: string[] = await contextManager.getChatHistory();
         const context: string = chatHistory.join("\n");
         const prompt: string = await this.getEncounterPrompt(contextManager, context);
-        
-        // Get the Encounter object
-        const result: string = await RepeatJsonGeneration(prompt, async (repeatPrompt: string): Promise<string> => {
-            const response = await contextManager.textGenerationClient.generateText(repeatPrompt, chatHistory, {
-                model: "gemini-2.5-flash-preview-04-17",
-                thinkingConfig: {
-                    thinkingBudget: 2048
-                }
-            });
-            return response;
-        }, (response: string): boolean => {
-            try {
-                const parsedResponse = JSON.parse(response);
-                return EncounterCodec.is(parsedResponse);
-            } catch (error) {
-                return false;
-            }
-        });
 
-        const encounter: Encounter = JSON.parse(result);
+        // Generate structured Encounter output using schema
+        const encounter: Encounter = await contextManager.textGenerationClient.generateText<Encounter>(
+            prompt,
+            chatHistory,
+            {
+                thinkingConfig: { thinkingBudget: 2048 }
+            },
+            undefined,
+            EncounterSchema
+        );
         console.log("Encounter created:", encounter);
 
         // Create the scene for the encounter
@@ -68,24 +61,37 @@ class CreateEncounterTool implements ITool {
     // Create tokens for the entities in the encounter and place them on the map
     async createEntityTokens(encounter: Encounter, contextManager: IContextManager, backgroundImage: string, 
         backgroundWidth: number, backgroundHeight: number, actors: Actor[]): Promise<void> {
-        const prompt: string = this.getEntityPlacementPrompt(encounter);
-
-        const response = await RepeatJsonGeneration(prompt, (repeatPrompt: string) => {
-            return contextManager.textGenerationClient.generateText(repeatPrompt, [], null, backgroundImage);
-        }, (response: string) => {
-            try{
-                const responseJson: any = JSON.parse(response);
-
-                return responseJson.tokens && Array.isArray(responseJson.tokens) && responseJson.tokens.length > 0 && responseJson.tokens.every((token: any) => {
-                    return token.name && typeof token.x === "number" && typeof token.y === "number";
-                });     
-            } catch (error) {
-                return false;
-            }
-        });
-
-        const responseJson: any = JSON.parse(response);
-        for (const token of responseJson.tokens) {
+        const prompt = this.getEntityPlacementPrompt(encounter);
+        const chatHistory = await contextManager.getChatHistory();
+        // Schema for token placements
+        const TokenPlacementSchema: Schema = {
+            type: Type.OBJECT,
+            properties: {
+                tokens: {
+                    type: Type.ARRAY,
+                    items: {
+                        type: Type.OBJECT,
+                        properties: {
+                            name: { type: Type.STRING },
+                            x: { type: Type.NUMBER },
+                            y: { type: Type.NUMBER }
+                        },
+                        required: ['name', 'x', 'y']
+                    }
+                }
+            },
+            required: ['tokens']
+        };
+        const placement = await contextManager.textGenerationClient.generateText<{
+            tokens: { name: string; x: number; y: number }[];
+        }>(
+            prompt,
+            chatHistory,
+            undefined,
+            backgroundImage,
+            TokenPlacementSchema
+        );
+        for (const token of placement.tokens) {
             const actor: Actor | undefined = actors.find((actor) => actor.name === token.name);
             if (actor) {
                 // Calculate the x and y coordinates based on the background image size

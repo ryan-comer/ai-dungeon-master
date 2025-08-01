@@ -9,14 +9,17 @@ import { ITextGenerationClient } from "../generation/clients/interfaces/ITextGen
 import { OllamaClient } from "../generation/clients/OllamaClient";
 import { OpenAIClient } from "../generation/clients/OpenAIClient";
 import { GoogleClient } from "../generation/clients/GoogleClient";
-import { RepeatJsonGeneration } from "../generation/clients/utils";
+// import RepeatJsonGeneration removed; using structured output instead
 
 import { IImageGenerationClient } from "../generation/clients/interfaces/IImageGenerationClient";
 import { ForgeClient } from "../generation/clients/ForgeClient";
 
-import { Campaign, CampaignCodec } from "./models/Campaign";
-import { Setting, SettingCodec } from "./models/Setting";
-import { Storyline, StorylineCodec } from "./models/Storyline";
+import { Campaign } from "./models/Campaign";
+import { CampaignSchema } from "./models/google/CampaignSchema";
+import { Setting } from "./models/Setting";
+import { SettingSchema } from "./models/google/SettingSchema";
+import { Storyline } from "./models/Storyline";
+import { StorylineSchema } from "./models/google/StorylineSchema";
 
 import { isRight } from "fp-ts/lib/Either";
 
@@ -44,98 +47,18 @@ class CampaignManager implements ICampaignManager {
             Be as descriptive as possible, and make sure to include all the key elements of the setting. This will be used as the foundation for the campaign.
 
             ${userPrompt.length > 0 ? `The setting should match the following user prompt: ${userPrompt}` : ""}
-
-            Give me the setting in the following JSON format. Do not skip any fields, all fields are required:
-
-            {
-                "name": "Name of the setting",
-                "description": "Description of the world",
-                "geography": [
-                    {
-                        "name": "Name of the region",
-                        "description": "Description of the region",
-                        "features": "Key features of the region",
-                        "settlements": [
-                            {
-                                "name": "Name of the settlement",
-                                "description": "Description of the settlement",
-                                "population": "Population of the settlement",
-                                "knownFor": "What the settlement is known for"
-                            }
-                        ]
-                    }
-                ],
-                "factions": [
-                    {
-                        "name": "Name of the faction",
-                        "description": "Description of the faction",
-                        "alignment": "Alignment of the faction",
-                        "goals": "Goals of the faction",
-                        "members": [
-                            {
-                                "name": "Name of the member",
-                                "role": "Role of the member in the faction",
-                                "description": "Description of the member"
-                            }
-                        ]
-                    }
-                ],
-                "notableFigures": [
-                    {
-                        "name": "Name of the figure",
-                        "description": "Description of the figure",
-                        "role": "Role of the figure in the world"
-                    }
-                ],
-                "historicalEvents": [
-                    {
-                        "name": "Name of the event",
-                        "description": "Description of the event",
-                        "date": "Date of the event"
-                    }
-                ],
-                "deities": [
-                    {
-                        "name": "Name of the deity",
-                        "description": "Description of the deity"
-                    }
-                ],
-                "monsters": [
-                    {
-                        "name": "Name of the monster",
-                        "description": "Description of the monster",
-                        "habitat": "Habitat of the monster"
-                    }
-                ],
-                "conflicts": [
-                    {
-                        "name": "Name of the conflict",
-                        "description": "Description of the conflict",
-                        "parties": [
-                            {
-                                "name": "Name of the party",
-                                "description": "Description of the party"
-                            }
-                        ]
-                ]
-            }
-
-            Do not reply with anything that is NOT JSON.
         `;
 
-        const setting: string = await RepeatJsonGeneration(prompt, async (repeatPrompt: string): Promise<string> => {
-            const repeatResponse: string = await this.textGenerationClient.generateText(repeatPrompt);
-            return repeatResponse;
-        }, (response: string): boolean => {
-            try {
-                const result = SettingCodec.decode(JSON.parse(response));
-                return isRight(result); // Use isRight to check if validation is successful
-            } catch (e) {
-                console.error("Error validating setting JSON:", e);
-                return false; // Return false if validation fails
-            }
-        });
-        const settingJson: Setting = JSON.parse(setting);
+        // Generate structured Setting output
+        const settingJson: Setting = await this.textGenerationClient.generateText<Setting>(
+            prompt,
+            [],
+            undefined,
+            undefined,
+            SettingSchema
+        );
+        console.dir(settingJson)
+        console.log(typeof(settingJson))
 
         await this.fileStore.saveSetting(settingJson.name, settingJson);
 
@@ -163,66 +86,16 @@ class CampaignManager implements ICampaignManager {
             The milestones will be used to create storylines that the players will play through, and each storyline should build towards the campaign's goals.
             Do not make the campaign generic or open-ended. Make it specific and focused on a clear objective that the players will work towards.
             Be as descriptive as possible, and make sure to include all the key elements of the campaign. This will be used as the foundation for the storylines.
-            Give me the campaign in the following JSON format. Do not skip any fields, all fields are required:
-
-            {
-                "name": "Name of the campaign",
-                "description": "Description of the campaign, including the world, characters, story and objectives",
-                "objectives": ["Objectives in the campaign - a clear list of concrete objectives"],
-                "overview": {
-                    "description": "Description of the campaign",
-                    "objective": "Objective of the campaign",
-                    "premise": "Premise of the campaign"
-                },
-                "factions": [
-                    {
-                        "name": "Name of the faction",
-                        "description": "Description of the faction",
-                        "motivation": "Motivation of the faction",
-                    }
-                ],
-                "characters": [
-                    {
-                        "name": "Name of the character",
-                        "description": "Description of the character",
-                        "role": "Role of the character in the campaign"
-                    }
-                ],
-                "locations": [
-                    {
-                        "name": "Name of the location",
-                        "description": "Description of the location",
-                        "features": "Key features of the location"
-                        "relevance": "Relevance of the location to the campaign"
-                    }
-                ],
-                // Milestones that the players will work towards
-                // These milestones will be used to create storylines that the players will play through
-                // Each milestone should build on top of one another to tell the larger story of the campaign
-                "milestones": [
-                    {
-                        "name": "Name of the milestone",
-                        "description": "Description of the milestone",
-                        "objective": "Objective of the milestone"
-                    }
-                ],
-            }
         `;
 
-        const campaign: string = await RepeatJsonGeneration(prompt, async (repeatPrompt: string): Promise<string> => {
-            const repeatResponse: string = await this.textGenerationClient.generateText(repeatPrompt);
-            return repeatResponse;
-        }, (response: string): boolean => {
-            try {
-                const result = CampaignCodec.decode(JSON.parse(response));
-                return isRight(result); // Use isRight to check if validation is successful
-            } catch (e) {
-                console.error("Error validating campaign JSON:", e);
-                return false; // Return false if validation fails
-            }
-        });
-
-        let campaignJson: Campaign = JSON.parse(campaign);
+        // Generate structured Campaign output
+        let campaignJson: Campaign = await this.textGenerationClient.generateText<Campaign>(
+            prompt,
+            [],
+            undefined,
+            undefined,
+            CampaignSchema
+        );
         campaignJson.setting = settingName;
 
         await this.fileStore.saveCampaign(settingName, campaignJson.name, campaignJson);
@@ -273,64 +146,16 @@ class CampaignManager implements ICampaignManager {
         Each task should build towards the storyline's objective and help progress the story.
         Don't make the segments and tasks too generic or open-ended. Make them specific and focused on the storyline's objective.
         Be as descriptive as possible, and make sure to include all the key elements of the storyline. This will be used as the foundation for the story that the players will play through.
-
-        Give me the storyline in the following JSON format. Do not skip any fields, all fields are required:
-
-        {
-            "name": "Name of the storyline",
-            "description": "Description of the storyline",
-            "objectives": ["Objective 1", "Objective 2", "Objective 3"],
-            "segments": [
-                {
-                    "name": "Name of the segment",
-                    "description": "Description of the segment",
-                    "tasks": [
-                        {
-                            "name": "Name of the task",
-                            "description": "Description of the task",
-                            "objective": "Objective of the task"
-                        }
-                    ],
-                    "locations": [
-                        {
-                            "name": "Name of the location",
-                            "description": "Description of the location",
-                            "features": "Key features of the location"
-                        }
-                    ],
-                    "characters": [
-                        {
-                            "name": "Name of the character",
-                            "description": "Description of the character",
-                            "role": "Role of the character in the segment"
-                        }
-                    ]
-                }
-            ],
-            "factions": [   // Array of factions
-                {
-                    "name": "Name of the faction",
-                    "description": "Description of the faction",
-                    "relevance": "Relevance of the faction to the storyline"
-                }
-            ]
-        }
         `;
 
-        const storyline: string = await RepeatJsonGeneration(prompt, async (repeatPrompt: string): Promise<string> => {
-            const repeatResponse: string = await this.textGenerationClient.generateText(repeatPrompt);
-            return repeatResponse;
-        }, (response: string): boolean => {
-            try {
-                const result = StorylineCodec.decode(JSON.parse(response));
-                return isRight(result); // Use isRight to check if validation is successful
-            } catch (e) {
-                console.error("Error validating storyline JSON:", e);
-                return false; // Return false if validation fails
-            }
-        });
-
-        const storylineJson: Storyline = JSON.parse(storyline);
+        // Generate structured Storyline output
+        const storylineJson: Storyline = await this.textGenerationClient.generateText<Storyline>(
+            prompt,
+            [],
+            undefined,
+            undefined,
+            StorylineSchema
+        );
         storylineJson.name = milestone.name; // Set the name of the storyline to the name of the milestone
         storylineJson.campaign = campaignName; // Set the campaign name for the storyline
 

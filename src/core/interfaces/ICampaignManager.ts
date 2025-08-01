@@ -4,12 +4,12 @@ import { Storyline } from '../models/Storyline';
 
 interface ICampaignManager {
     createSetting(userPrompt: string): Promise<Setting>;
-    createCampaign(setting: string, userPrompt: string): Promise<Campaign>;
-    createStoryline(setting: string, campaign: string, milestoneIndex: number, userPrompt: string): Promise<Storyline>;
+    createCampaign(settingName: string, userPrompt: string): Promise<Campaign>;
+    createStoryline(settingName: string, campaignName: string, milestoneIndex: number, userPrompt: string): Promise<Storyline>;
 
-    getSetting(setting: string): Promise<Setting | null>;
-    getCampaign(setting: string, campaign: string): Promise<Campaign | null>;
-    getStoryline(setting: string, campaign: string, storyline: string): Promise<Storyline | null>;
+    getSetting(settingName: string): Promise<Setting | null>;
+    getCampaign(settingName: string, campaignName: string): Promise<Campaign | null>;
+    getStoryline(settingName: string, campaignName: string, storylineName: string): Promise<Storyline | null>;
 }
 
 export { ICampaignManager };

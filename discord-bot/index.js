@@ -96,7 +96,7 @@ app.post('/speak', async (req, res) => {
         // Configure the request for Google Cloud Text-to-Speech
         const request = {
             input: { text },
-            voice: { languageCode: 'en-US', name: 'en-US-Chirp3-HD-Charon' },
+            voice: { languageCode: 'en-US', name: 'en-US-Chirp3-HD-Algieba' },
             audioConfig: { audioEncoding: 'MP3' },
         };
 

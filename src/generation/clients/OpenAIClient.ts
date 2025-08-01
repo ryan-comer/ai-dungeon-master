@@ -1,6 +1,7 @@
 import { ITextGenerationClient } from "./interfaces/ITextGenerationClient";
 import { TryParseJson } from "./utils";
 import OpenAI from "openai";
+import { Schema } from '@google/genai';
 
 class OpenAIClient implements ITextGenerationClient {
     private openai: OpenAI;
@@ -13,7 +14,14 @@ class OpenAIClient implements ITextGenerationClient {
         this.model = model;
     }
 
-    async generateText(prompt: string, optionsOverride?: any): Promise<string> {
+    async generateText<T = string>(
+        prompt: string,
+        chatHistory?: string[],
+        optionsOverride?: any,
+        image?: string,
+        schema?: Schema
+    ): Promise<T> {
+        // raw text client: ignore chatHistory, image, and schema
         const response = await this.openai.chat.completions.create({
             model: this.model,
             messages: [
@@ -36,7 +44,7 @@ class OpenAIClient implements ITextGenerationClient {
 
         let text = response.choices[0].message.content;
 
-        return text
+        return text as unknown as T;
     }
 
     async unloadModel(): Promise<void> {

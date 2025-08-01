@@ -3,7 +3,7 @@ import { IFileStore } from "../utils/interfaces/IFileStore";
 
 import { ITextGenerationClient } from "../generation/clients/interfaces/ITextGenerationClient";
 import { OllamaClient } from "../generation/clients/OllamaClient";
-import { RepeatJsonGeneration } from "../generation/clients/utils";
+import { Schema, Type } from '@google/genai';
 
 import { Setting } from "./models/Setting";
 import { Campaign } from "./models/Campaign";
@@ -34,7 +34,7 @@ class SemanticIndex implements ISemanticIndex {
         }
         semanticIndex = await this.fileStore.getSemanticIndex(setting, campaign, entityType);
 
-        console.log(`Semantic index: ${JSON.stringify(semanticIndex)}`);
+        //console.log(`Semantic index: ${JSON.stringify(semanticIndex)}`);
 
         const indexPrompt: string = `
         I am going to give you JSON that represents an entity, as well as a list of other JSON entities.
@@ -70,26 +70,50 @@ class SemanticIndex implements ISemanticIndex {
         Only reply with JSON, nothing else.
         `;
 
-        let responseString: string = await RepeatJsonGeneration(indexPrompt, async (prompt: string): Promise<string> => {
-            const responseString: string = await this.textGenerationClient.generateText(prompt);
-            return responseString;
-        }, (response: string): boolean => {
-            const responseJson: any = JSON.parse(response);
-            if (responseJson.result == 'none') {
-                return true;
+        // Generate structured index lookup output
+        const IndexSchema: Schema = {
+            type: Type.OBJECT,
+            properties: {
+                name: { type: Type.STRING },
+                context: { type: Type.STRING },
+                result: { type: Type.STRING }
             }
+        };
+        const response: any = await this.textGenerationClient.generateText<any>(
+            indexPrompt,
+            [],
+            undefined,
+            undefined,
+            IndexSchema
+        );
 
-            if (responseJson.name == undefined || responseJson.context == undefined) {
-                console.log('Invalid response format. Expected JSON with "name" and "context" properties.');
-                return false;
-            }
+        console.log(`Entity lookup prompt: ${indexPrompt}`);
+        console.log(`Semantic index response: ${JSON.stringify(response, null, 2)}`);
 
-            return true;
-        });
-        const response: any = JSON.parse(responseString);
-
-        if (response.result == 'none') {
+        if (response.result === 'none' && !response.name && !response.context) {
             return null;
+        }
+
+        // If a match is found, merge any new context into the existing context
+        const existingIndex = (semanticIndex.index as Array<any>);
+        const matchEntry = existingIndex.find(e => e.name === response.name);
+        if (matchEntry) {
+            const mergePrompt = `
+I have existing JSON context for an entity:
+${matchEntry.context}
+
+I have new JSON context that may contain updated or additional information:
+${prompt}
+
+Please merge these into a single JSON blob, preserving all original fields and updating values where necessary.
+Only reply with the merged JSON, nothing else.`;
+            // generate merged context and strip any code fences
+            const rawMerged: string = await this.textGenerationClient.generateText<string>(mergePrompt);
+            const mergedContext: string = rawMerged.replace(/^```(?:\w*)?\s*/, "").replace(/\s*```$/, "");
+            matchEntry.context = mergedContext;
+            // persist updated semantic index
+            console.log(`Updating existing entity in semantic index: ${JSON.stringify(matchEntry, null, 2)}`);
+            await this.fileStore.saveSemanticIndex(setting, campaign, entityType, semanticIndex);
         }
 
         // Load the entity data

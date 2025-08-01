@@ -2,12 +2,29 @@ import { IEncounterManager } from './interfaces/IEncounterManager';
 import { IContextManager } from './interfaces/IContextManager';
 import { Encounter } from "./models/Encounter"
 import { Player } from "./models/Player";
-import { init } from 'fp-ts/lib/ReadonlyNonEmptyArray';
 import * as t from 'io-ts';
 import { isRight } from 'fp-ts/Either';
+import { Schema, Type } from '@google/genai';
 import { sendChatMessage } from '../utils/utils';
 
-import { RepeatJsonGeneration } from '../generation/clients/utils';
+// JSON schema for NPCActions structured output
+const NPCActionsSchema: Schema = {
+  type: Type.OBJECT,
+  properties: {
+    action: { type: Type.STRING },
+    bonusAction: { type: Type.STRING },
+    reaction: { type: Type.STRING },
+    movement: {
+      type: Type.OBJECT,
+      properties: {
+        x: { type: Type.NUMBER },
+        y: { type: Type.NUMBER }
+      },
+      required: ['x', 'y']
+    }
+  },
+  required: ['action', 'bonusAction', 'reaction', 'movement']
+};
 
 class EntityState {
     name: string = "";
@@ -176,35 +193,16 @@ class EncounterManager implements IEncounterManager {
         const npcLocation = this.getGridXY(token.x, token.y);
         const npcActionsPrompt = this.getNPCActionsPrompt(actor, npcLocation);
 
-        const npcActionsString: string = await RepeatJsonGeneration(npcActionsPrompt, async (repeatPrompt: string) => {
-            // Retry logic can be implemented here if needed
-            const response: string = await this.contextManager?.textGenerationClient.generateText(repeatPrompt, [], {
-                //model: "gemini-2.5-pro-preview-03-25",
-                model: "gemini-2.5-flash-preview-04-17",
-                thinkingConfig: {
-                    thinkingBudget: 1024
-                }
-            }) ?? "";
-            return response;
-        }, (response: string) => {
-            // Validate the response using the codec
-            const validationResult = NPCActionsCodec.decode(JSON.parse(response));
-            if (isRight(validationResult)) {
-                return true;
-            } else {
-                console.error("Invalid response format:", validationResult.left);
-                return false;
-            }
-        });
+        // Generate structured NPC actions
+        const npcActions: NPCActions = await this.contextManager!.textGenerationClient.generateText<NPCActions>(
+            npcActionsPrompt,
+            [],
+            { thinkingConfig: { thinkingBudget: 1024 } },
+            undefined,
+            NPCActionsSchema
+        );
 
-        const npcActions: NPCActions | null = JSON.parse(npcActionsString);
-
-        if (npcActions) {
-            console.log("NPC Actions:", npcActions);
-        } else {
-            console.error("Failed to generate valid NPC actions.");
-            return;
-        }
+        console.log("NPC Actions:", npcActions);
 
         // Place the marker for movement if the NPC is moving
         console.log("NPC Location:", npcLocation);

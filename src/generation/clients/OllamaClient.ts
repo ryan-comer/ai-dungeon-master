@@ -1,5 +1,6 @@
 import { ITextGenerationClient } from "./interfaces/ITextGenerationClient";
 import ollama from "ollama";
+import { Schema } from '@google/genai';
 
 class OllamaClient implements ITextGenerationClient {
 
@@ -10,7 +11,14 @@ class OllamaClient implements ITextGenerationClient {
         this.model = model;
     }
 
-    async generateText(prompt: string, optionsOverride?: any): Promise<string> {
+    async generateText<T = string>(
+        prompt: string,
+        chatHistory?: string[],
+        optionsOverride?: any,
+        image?: string,
+        schema?: Schema
+    ): Promise<T> {
+        // raw text client: ignore chatHistory, image, and schema
         while (true) {
             try {
                 const response = await ollama.chat({
@@ -27,7 +35,7 @@ class OllamaClient implements ITextGenerationClient {
                     }
                 })
 
-                return response.message.content
+                return response.message.content as unknown as T;
             } catch (e) {
                 console.error("Error generating text:", e)
             }

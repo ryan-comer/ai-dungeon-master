@@ -1,5 +1,5 @@
 import { ITextGenerationClient } from "./interfaces/ITextGenerationClient";
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenAI, Schema } from "@google/genai";
 
 class GoogleClient implements ITextGenerationClient {
 
@@ -8,14 +8,20 @@ class GoogleClient implements ITextGenerationClient {
     private model: string;
     private options: any;
 
-    constructor(apiKey: string, model: string = "gemini-2.5-flash-preview-04-17", options?: any) {
+    constructor(apiKey: string, model: string = "gemini-2.5-flash", options?: any) {
         this.apiKey = apiKey;
         this.genAI = new GoogleGenAI({apiKey});
         this.model = model;
         this.options = options || {};
     }
 
-    async generateText(prompt: string, chatHistory?: string[], optionsOverride?: any, image?: string): Promise<string> {
+    async generateText<T = any>(
+        prompt: string,
+        chatHistory?: string[],
+        optionsOverride?: any,
+        image?: string,
+        schema?: Schema
+    ): Promise<T> {
         const history = chatHistory ? chatHistory.map((message, index) => {
             return {
                 role: index % 2 === 0 ? "user" : "model",
@@ -46,11 +52,15 @@ class GoogleClient implements ITextGenerationClient {
         let response: any;
         while (retryCount > 0) {
             try {
+                // Prepare config, including structured output if schema provided
+                const config: any = { ...(optionsOverride || {}) };
+                if (schema) {
+                    config.responseMimeType = 'application/json';
+                    config.responseSchema = schema;
+                }
                 response = await chat.sendMessage({
                     message: message,
-                    config: {
-                        ...optionsOverride
-                    }
+                    config
                 });
             } catch (error) {
                 console.error(`Error generating text: ${error}`);
@@ -61,13 +71,27 @@ class GoogleClient implements ITextGenerationClient {
             break;
         }
 
-        if (!response.candidates || response.candidates.length === 0 || !response.candidates[0].content 
-            || !response.candidates[0].content.parts || response.candidates[0].content.parts.length === 0 
-            || !response.candidates[0].content.parts[0].text) {
+        if (
+            !response.candidates ||
+            response.candidates.length === 0 ||
+            !response.candidates[0].content ||
+            !response.candidates[0].content.parts ||
+            response.candidates[0].content.parts.length === 0 ||
+            !response.candidates[0].content.parts[0].text
+        ) {
             throw new Error(`Error generating text`);
         }
-
-        return response.candidates[0].content.parts[0].text;
+        const raw = response.candidates[0].content.parts[0].text;
+        // If a schema was provided, parse structured JSON
+        if (schema) {
+            try {
+                return JSON.parse(raw) as T;
+            } catch (e) {
+                throw new Error(`Failed to parse structured output: ${e}`);
+            }
+        }
+        // Otherwise, return raw text
+        return raw as unknown as T;
     }
 
     async unloadModel(): Promise<void> {

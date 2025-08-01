@@ -1,7 +1,7 @@
 import { ITool } from "./interfaces/ITool";
 import { IContextManager } from "../core/interfaces/IContextManager";
-import { RepeatJsonGeneration } from "../generation/clients/utils";
 import { stripInvalidFilenameChars } from "../utils/utils";
+import { Schema, Type } from '@google/genai';
 
 class SceneViewerTool implements ITool {
     name: string = "Scene Viewer Tool";
@@ -12,17 +12,29 @@ class SceneViewerTool implements ITool {
     `;
 
     async run(contextManager: IContextManager): Promise<void> {
-        const scenePrompt: string = await RepeatJsonGeneration(this.getScenePrompt(), async (repeatPrompt: string):Promise<string> => {
-            const chatHistory: string[] = await contextManager.getChatHistory();
-            const response: string = await contextManager.textGenerationClient.generateText(repeatPrompt, chatHistory);
-            return response;
-        }, (response: string):boolean => {
-            const responseJson: any = JSON.parse(response);
-            return responseJson && responseJson.prompt && responseJson.name;
-        });
-        const scenePromptJson: any = JSON.parse(scenePrompt);
+        const chatHistory: string[] = await contextManager.getChatHistory();
+        // Define schema for structured scene output
+        const SceneSchema: Schema = {
+            type: Type.OBJECT,
+            properties: {
+                name: { type: Type.STRING },
+                prompt: { type: Type.STRING }
+            },
+            required: ['name', 'prompt']
+        };
+        // Generate structured output
+        const scenePromptJson = await contextManager.textGenerationClient.generateText<{
+            name: string;
+            prompt: string;
+        }>(
+            this.getScenePrompt(),
+            chatHistory,
+            undefined,
+            undefined,
+            SceneSchema
+        );
 
-        const image: string = await contextManager.imageGenerationClient.generateImage(scenePrompt);
+        const image: string = await contextManager.imageGenerationClient.generateImage(scenePromptJson.prompt);
         // Image path with random numbers to avoid overwriting
         const randomSuffix = Math.floor(Math.random() * 1000000); // Generate a random number
         const imagePath: string = `${contextManager.fileStore.getBasePath()}/scenes/${stripInvalidFilenameChars(scenePromptJson.name)}_${randomSuffix}.png`;
