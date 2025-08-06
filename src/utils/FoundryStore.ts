@@ -52,6 +52,14 @@ class FoundryStore implements IFileStore {
 
         console.log("Getting sessions for: ", settingName, campaignName)
 
+        // Check if the path exists
+        const sessionsPath: string = `${this.getBasePath()}/settings/${settingName}/${campaignName}/sessions`;
+        const exists = await FilePicker.browse('data', sessionsPath).then(() => true).catch(() => false);
+        if (!exists) {
+            console.log("No sessions found for: ", settingName, campaignName);
+            return [];
+        }
+
         const sessionDirectories: string[] = await this.getDirectories(`${this.getBasePath()}/settings/${settingName}/${campaignName}/sessions`);
 
         console.log("Session directories: ", sessionDirectories)
