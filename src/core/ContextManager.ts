@@ -16,6 +16,7 @@ import { ITextGenerationClient } from "../generation/clients/interfaces/ITextGen
 import { IImageGenerationClient } from "../generation/clients/interfaces/IImageGenerationClient";
 import { ITextToSpeechClient } from "../generation/clients/interfaces/ITextToSpeechClient";
 import { sendChatMessage } from "../utils/utils";
+import { MessageSchema } from "./models/google/MessageSchema";
 import { ITool } from "../tools/interfaces/ITool";
 
 import { ICommand } from "../commands/interfaces/ICommand";
@@ -24,6 +25,8 @@ import { SceneViewCommand } from "../commands/SceneViewCommand";
 import { EncounterCommand } from "../commands/EncounterCommand";
 import { Player } from "./models/Player";
 import { Session } from "./models/Session";
+import { SessionPlayer } from "./models/SessionPlayer";
+import { ChatMessage as DMChatMessage } from "./models/ChatMessage";
 
 import { stripInvalidFilenameChars } from "../utils/utils";
 import { cons } from "fp-ts/lib/ReadonlyNonEmptyArray";
@@ -71,9 +74,17 @@ class ContextManager implements IContextManager {
 
     // Get the list of players in the campaign
     async getPlayers (): Promise<Player[]> {
-        const playerActors: any[] = game.actors?.filter((actor: any) => {
-            return actor.hasPlayerOwner
-        }) ?? [];
+    // Convert actors collection to array, guard against undefined
+    const actorsCollection = game.actors;
+    const allActors: any[] = actorsCollection ? Array.from(actorsCollection.values()) : [];
+        const playersFolder = game.folders?.find(f => f.name === 'Players' && f.type === 'Actor');
+        let playerActors: any[] = [];
+        if (playersFolder) {
+            playerActors = allActors.filter((actor: any) => actor.folder?.id === playersFolder.id);
+        } else {
+            console.warn("Players folder not found, falling back to actors with player owner");
+            playerActors = allActors.filter((actor: any) => actor.hasPlayerOwner);
+        }
 
         const players: Player[] = playerActors.map((actor: any) => {
             return {
@@ -112,32 +123,37 @@ class ContextManager implements IContextManager {
         const prompt: string = await this.getInitialPrompt();
 
         // Check if we need to get the initial prompt
-        if (session.chatHistory.length === 0) {
-            console.log("Adding initial prompt to chat history...");
-            session.chatHistory.push(prompt); // Add initial prompt to chat history
-            const response: string = await this.textGenerationClient.generateText(
-                prompt
+        if (session.chatMessages.length === 0) {
+            console.log("Adding initial system prompt to chat messages...");
+            // Add system prompt as Narrator
+            session.chatMessages.push({ speaker: 'Narrator', message: prompt });
+            // Generate structured chat messages from AI using shared schema
+            const aiMessages = await this.textGenerationClient.generateText<DMChatMessage[]>(
+                prompt,
+                undefined,
+                undefined,
+                undefined,
+                MessageSchema
             );
-
-            session.chatHistory.push(response); // Add AI response to chat history
-            sendChatMessage(response);
-
-            // Send to TTS
-            if (this.textToSpeechClient) {
-                try {
-                    await this.textToSpeechClient.speak(response);
-                } catch (error) {
-                    this.logger.error("Error speaking text:", error);
+            // Append each AI message and deliver
+            for (const msg of aiMessages) {
+                session.chatMessages.push(msg);
+                sendChatMessage(`${msg.speaker}: ${msg.message}`);
+                if (this.textToSpeechClient) {
+                    try {
+                        await this.textToSpeechClient.speak(msg.message);
+                    } catch (error) {
+                        this.logger.error("Error speaking text:", error);
+                    }
                 }
             }
-
             this.logger.info(`Started session: ${this.loadedCampaign.name}`);
         } else {
-            // Swap the first message to refresh the initial context
-            session.chatHistory[0] = prompt;
+            // Refresh the system prompt message
+            session.chatMessages[0].message = prompt;
         }
 
-        await this.fileStore.saveSession(this.loadedSetting.name, this.loadedCampaign.name, session.name, session); // Save the session with updated chat history
+        await this.fileStore.saveSession(this.loadedSetting.name, this.loadedCampaign.name, session.name, session); // Save the session with updated chat messages
 
         return null;
     }
@@ -155,14 +171,25 @@ class ContextManager implements IContextManager {
         return session;
     }
 
-    async startSession(setting: Setting, campaign: Campaign, sessionName: string): Promise<void> {
-        const session: Session | null = await this.getSession(setting.name, campaign.name, sessionName);
+    async startSession(setting: Setting, campaign: Campaign, sessionName: string, players?: SessionPlayer[]): Promise<void> {
+    const session: Session | null = await this.getSession(setting.name, campaign.name, sessionName);
 
         if (!session) {
             this.logger.error(`Session ${sessionName} not found in campaign ${campaign.name}`);
             return;
         }
         this.currentSession = session; // Set the current session
+        // Initialize session players: use provided flags or default to human-controlled
+        if (players && players.length > 0) {
+            this.currentSession.players = players;
+        } else if (!this.currentSession.players || this.currentSession.players.length === 0) {
+            try {
+                const playerList = await this.getPlayers();
+                this.currentSession.players = playerList.map(p => ({ name: p.name, isAIControlled: false }));
+            } catch (err) {
+                this.logger.error('Failed to initialize session players', err);
+            }
+        }
 
         // Load the context for the session
         console.log("Loaded context:", this.currentSession);
@@ -170,9 +197,9 @@ class ContextManager implements IContextManager {
         console.log("Loaded context:", this.currentSession);
 
         // Update the session indices
-        if (this.currentSession.sessionIndices.length > 0 && this.currentSession.sessionIndices[this.currentSession.sessionIndices.length - 1] !== this.currentSession.chatHistory.length - 1) {
+        if (this.currentSession.sessionIndices.length > 0 && this.currentSession.sessionIndices[this.currentSession.sessionIndices.length - 1] !== this.currentSession.chatMessages.length - 1) {
             console.log("Adding last index to session indices...");
-            this.currentSession.sessionIndices.push(this.currentSession.chatHistory.length - 1); // Add the last index
+            this.currentSession.sessionIndices.push(this.currentSession.chatMessages.length - 1); // Add the last index
         }
 
         const lastSessionSummary: string = await this.getSessionSummary(this.currentSession);
@@ -223,38 +250,43 @@ class ContextManager implements IContextManager {
             return;
         }
     }
-
-    async addChatHistory(message: string): Promise<void> {
-        if (!this.currentSession) {
-            this.logger.error("No current session to add chat history.");
+    // Add a structured chat message to current session and save
+    async addChatMessage(message: DMChatMessage): Promise<void> {
+        if (!this.currentSession || !this.loadedSetting || !this.loadedCampaign) {
+            this.logger.error("No current session to add chat message.");
             return;
         }
-
-        this.currentSession.chatHistory.push(message); // Add user message to chat history
-        await this.fileStore.saveSession(this.loadedSetting!.name, this.loadedCampaign!.name, this.currentSession.name, this.currentSession); // Save the session with updated chat history
+        this.currentSession.chatMessages.push(message);
+        await this.fileStore.saveSession(
+            this.loadedSetting.name,
+            this.loadedCampaign.name,
+            this.currentSession.name,
+            this.currentSession
+        );
     }
 
-    async getChatHistory(): Promise<string[]> {
+    // Get structured chat messages from current session
+    async getChatMessages(): Promise<DMChatMessage[]> {
         if (!this.currentSession) {
-            this.logger.error("No current session to get chat history.");
+            this.logger.error("No current session to get chat messages.");
             return [];
         }
-
-        return this.currentSession.chatHistory; // Return the chat history of the current session
+        return this.currentSession.chatMessages;
     }
+
+
 
     async getSessionSummary(session: Session): Promise<string> {
         // Check if we need to summarize what happened in the last session
         if (session.sessionIndices.length > 0) {
-            let startIndex: number
-            let endIndex: number
-
-            startIndex = session.sessionIndices[session.sessionIndices.length - 2];
-            endIndex = session.sessionIndices[session.sessionIndices.length - 1];
-
-            const sessionText: string = session.chatHistory.slice(startIndex, endIndex).join("\n");
-            const summaryPrompt: string = `
-            The following is the chat history for a dnd session.
+            const len = session.sessionIndices.length;
+            const startIndex = session.sessionIndices[len - 2];
+            const endIndex = session.sessionIndices[len - 1];
+            // Prepare text from structured chat messages
+            const segment = session.chatMessages.slice(startIndex, endIndex);
+            const sessionText = segment.map(msg => `${msg.speaker}: ${msg.message}`).join("\n");
+            const summaryPrompt = `
+            The following is the chat history for a DND session.
             Summarize what happened in the last session and provide a brief overview of the events, characters, and locations involved.
             Only reply with the summary and do not include any system messages or instructions.
             The chat history is as follows:
@@ -262,9 +294,8 @@ class ContextManager implements IContextManager {
             `;
             const summary: string = await this.textGenerationClient.generateText(summaryPrompt);
             return summary;
-        } else {
-            return "";
         }
+        return "";
     }
 
     // Get the initial prompt for the AI DM
@@ -278,6 +309,8 @@ class ContextManager implements IContextManager {
         const locations: Location[] = await this.entityManager.getLocations(this.loadedSetting, this.loadedCampaign);
         const factions: Faction[] = await this.entityManager.getFactions(this.loadedSetting, this.loadedCampaign);
         const players: Player[] = await this.getPlayers();
+        // Include AI-controlled players for dialogue
+        const aiPlayers = this.currentSession?.players.filter(p => p.isAIControlled).map(p => p.name) || [];
 
         return `
         You are a text-based AI Dungeon Master (DM) for a tabletop role-playing game (RPG).
@@ -356,6 +389,12 @@ class ContextManager implements IContextManager {
 
         These are the players in the game:
         ${JSON.stringify(players, null, 2)}
+        
+        These players are AI-controlled and should speak for themselves when appropriate:
+        ${JSON.stringify(aiPlayers, null, 2)}
+
+        Do not have any player characters speak for themselves unless they are marked as AI-controlled,
+        Only the AI-controlled players can speak for themselves.
 
         Start off by describing the setting and the current situation in the game world.
         Include any important characters, locations, and events that are relevant to the players.
@@ -365,6 +404,8 @@ class ContextManager implements IContextManager {
         The players need to know what they can do and what is happening around them.
 
         Only respond with the narrative and do not include any system messages or instructions.
+        
+        IMPORTANT: Output should be a valid JSON array of objects, each with "speaker" and "message" fields. Do NOT include any text outside the JSON array.
 
         Don't abruptly end the story, always let the players take actions and make decisions.
         It is possible for players to die in the game, but make sure to give them opportunities to succeed and survive.
@@ -381,6 +422,50 @@ class ContextManager implements IContextManager {
         return `
         ${message}
         `;
+    }
+    // Get players in the current session with control flags
+    async getSessionPlayers(): Promise<SessionPlayer[]> {
+        if (!this.currentSession) {
+            this.logger.error("No current session to get players from.");
+            return [];
+        }
+        return this.currentSession.players;
+    }
+
+    // Set control flag for a session player and save session
+    async setPlayerControl(playerName: string, isAIControlled: boolean): Promise<void> {
+        if (!this.currentSession || !this.loadedSetting || !this.loadedCampaign) {
+            this.logger.error("Cannot set player control without an active session.");
+            return;
+        }
+        const player = this.currentSession.players.find(p => p.name === playerName);
+        if (!player) {
+            this.logger.error(`Player ${playerName} not found in session.`);
+            return;
+        }
+        player.isAIControlled = isAIControlled;
+        await this.fileStore.saveSession(
+            this.loadedSetting.name,
+            this.loadedCampaign.name,
+            this.currentSession.name,
+            this.currentSession
+        );
+    }
+    /**
+     * Set multiple player control flags at once and save session
+     */
+    async setSessionPlayers(players: SessionPlayer[]): Promise<void> {
+        if (!this.currentSession || !this.loadedSetting || !this.loadedCampaign) {
+            this.logger.error("Cannot set session players without an active session.");
+            return;
+        }
+        this.currentSession.players = players;
+        await this.fileStore.saveSession(
+            this.loadedSetting.name,
+            this.loadedCampaign.name,
+            this.currentSession.name,
+            this.currentSession
+        );
     }
 
 }

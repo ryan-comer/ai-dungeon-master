@@ -56,3 +56,17 @@ label {
     font-size: 1rem;
     color: #555;
 }
+/* Player control list styles */
+.player-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 4px 0;
+}
+.player-checkbox {
+    margin: 0;
+}
+.player-label {
+    margin: 0;
+    display: inline;
+}

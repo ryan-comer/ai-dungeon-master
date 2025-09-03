@@ -25,6 +25,8 @@ import { EventEmitter } from "events"; // Add this import for event handling
 import { ITool } from "../tools/interfaces/ITool";
 import { ITextToSpeechClient } from "../generation/clients/interfaces/ITextToSpeechClient";
 import { Session } from "./models/Session";
+import { SessionPlayer } from "./models/SessionPlayer";
+import { Player } from "./models/Player";
 
 class CoreManager implements ICoreManager {
     public campaignManager: ICampaignManager;
@@ -130,7 +132,7 @@ class CoreManager implements ICoreManager {
         return this.contextManager.getSessions(settingName, campaignName); // Get all sessions
     }
 
-    async startSession(settingName: string, campaignName: string, sessionName: string): Promise<void> {
+    async startSession(settingName: string, campaignName: string, sessionName: string, players?: SessionPlayer[]): Promise<void> {
         const campaign: Campaign | null = await this.campaignManager.getCampaign(settingName, campaignName);
         if (!campaign) {
             this.logger.error(`Campaign ${campaignName} not found in setting ${settingName}`);
@@ -147,11 +149,28 @@ class CoreManager implements ICoreManager {
 
         this.logger.info("Loading campaign context...");
         this.logger.info("Campaign context loaded.");
-        await this.contextManager.startSession(setting, campaign, sessionName); // Start a session
+    await this.contextManager.startSession(setting, campaign, sessionName, players); // Start a session with optional player flags
     }
 
     async getLoadedCampaign(): Promise<Campaign | null> {
         return this.loadedCampaign
+    }
+
+    // Session player control methods
+    async getSessionPlayers(): Promise<SessionPlayer[]> {
+        return this.contextManager.getSessionPlayers();
+    }
+
+    async setPlayerControl(playerName: string, isAIControlled: boolean): Promise<void> {
+        return this.contextManager.setPlayerControl(playerName, isAIControlled);
+    }
+
+    async setSessionPlayers(players: SessionPlayer[]): Promise<void> {
+        return this.contextManager.setSessionPlayers(players);
+    }
+
+    async getPlayers(): Promise<Player[]> {
+        return this.contextManager.getPlayers();
     }
 
     // User sent a message to the AI Dungeon Master

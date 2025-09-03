@@ -35,6 +35,7 @@ export class CampaignWindow extends Application {
         super.activateListeners(html);
 
         this.settingsList = html.find('#setting-list');
+        this.playerList = html.find('#player-list');
         this.campaignList = html.find('#campaign-list');
         this.sessionList = html.find('#session-list');
         this.loadingIcon = html.find('#loading-icon');
@@ -56,11 +57,14 @@ export class CampaignWindow extends Application {
         this.settingsList.change(this._onSettingChange.bind(this));
         this.campaignList.change(this._onCampaignChange.bind(this));
         this.sessionList.change(this._onSessionChange.bind(this));
+        // When session changes, refresh the player control list
+        this.sessionList.change(this._onSessionChange.bind(this));
 
         // Refesh settings and campaigns on load
         this.refreshSettings().then(async () => {
             await this.refreshCampaigns();
             await this.refreshSessions();
+            await this.refreshPlayers();
         });
     }
 
@@ -128,7 +132,15 @@ export class CampaignWindow extends Application {
     }
 
     async _onSessionChange(event) {
-        // placeholder if needed for session selection changes
+        // Refresh player list when selecting a session
+        const settingName = this.settingsList.val();
+        const campaignName = this.campaignList.val();
+        const sessionName = this.sessionList.val();
+        if (!settingName || !campaignName || !sessionName) {
+            this.playerList.empty();
+            return;
+        }
+        await this.refreshPlayers();
     }
 
     async _onCreateSession(event) {
@@ -173,8 +185,18 @@ export class CampaignWindow extends Application {
         }
         
         try {
-            this._setLoadingState(true, "Starting session...");
-            await this.coreManager.startSession(settingName, campaignName, sessionName);
+            // Collect AI control flags for all session players
+            const sessionPlayers = [];
+            this.playerList.find('input.player-checkbox').each((i, el) => {
+                const name = $(el).data('player-name');
+                const isAI = $(el).is(':checked');
+                sessionPlayers.push({ name, isAIControlled: isAI });
+            });
+            // Start the session with initial player control flags
+            this._setLoadingState(true, "Starting session with player flags...");
+            await this.coreManager.startSession(settingName, campaignName, sessionName, sessionPlayers);
+            // Refresh player list UI after session start
+            await this.refreshPlayers();
         } catch (error) {
             ui.notifications.error("Failed to start session: " + error.message);
             console.error(error);
@@ -241,6 +263,31 @@ export class CampaignWindow extends Application {
         sessions.forEach(s => {
             const opt = $(`<option value="${s.name}">${s.name}</option>`);
             this.sessionList.append(opt);
+        });
+    }
+    
+    /**
+     * Refresh the player control list: list all player actors and their AI control flag
+     */
+    async refreshPlayers() {
+        this.playerList.empty();
+        // Retrieve players via CoreManager to avoid duplicating logic
+        let players = [];
+        try {
+            players = await this.coreManager.getPlayers();
+        } catch (err) {
+            console.error("Failed to fetch players:", err);
+        }
+        // For each player, create a checkbox
+        players.forEach(p => {
+            const name = p.name;
+            const isAI = false; // default unchecked until session start
+            const item = $("<div class='player-item'></div>");
+            const checkbox = $(`<input type='checkbox' class='player-checkbox' data-player-name='${name}'/>`);
+            checkbox.prop('checked', isAI);
+            const label = $(`<label class='player-label'>${name} (AI Controlled)</label>`);
+            item.append(checkbox, label);
+            this.playerList.append(item);
         });
     }
 }

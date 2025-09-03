@@ -19,7 +19,7 @@ class CreateEncounterTool implements ITool {
     `;
 
     async run(contextManager: IContextManager): Promise<void> {
-        const chatHistory: string[] = await contextManager.getChatHistory();
+        const chatHistory: string[] = (await contextManager.getChatMessages()).map(m => `${m.speaker}: ${m.message}`);
         const context: string = chatHistory.join("\n");
         const prompt: string = await this.getEncounterPrompt(contextManager, context);
 
@@ -62,7 +62,7 @@ class CreateEncounterTool implements ITool {
     async createEntityTokens(encounter: Encounter, contextManager: IContextManager, backgroundImage: string, 
         backgroundWidth: number, backgroundHeight: number, actors: Actor[]): Promise<void> {
         const prompt = this.getEntityPlacementPrompt(encounter);
-        const chatHistory = await contextManager.getChatHistory();
+        const chatHistory = (await contextManager.getChatMessages()).map(m => `${m.speaker}: ${m.message}`);
         // Schema for token placements
         const TokenPlacementSchema: Schema = {
             type: Type.OBJECT,

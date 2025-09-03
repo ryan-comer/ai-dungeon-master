@@ -12,7 +12,7 @@ class SceneViewerTool implements ITool {
     `;
 
     async run(contextManager: IContextManager): Promise<void> {
-        const chatHistory: string[] = await contextManager.getChatHistory();
+        const chatHistory: string[] = (await contextManager.getChatMessages()).map(m => `${m.speaker}: ${m.message}`);
         // Define schema for structured scene output
         const SceneSchema: Schema = {
             type: Type.OBJECT,

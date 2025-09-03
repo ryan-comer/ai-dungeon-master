@@ -2,6 +2,8 @@ import { ICommand } from "./interfaces/ICommand";
 import { IContextManager } from "../core/interfaces/IContextManager";
 import { ChatData } from "../core/interfaces/ICoreManager";
 import { sendChatMessage } from "../utils/utils";
+import { ChatMessage as DMChatMessage } from "../core/models/ChatMessage";
+import { MessageSchema } from "../core/models/google/MessageSchema";
 import { ITool } from "../tools/interfaces/ITool";
 
 class ChatCommand implements ICommand {
@@ -22,33 +24,46 @@ class ChatCommand implements ICommand {
             return;
         }
 
-        const newMessage: string = `${chatData.speaker.alias}: ${message}` 
-        sendChatMessage(newMessage); // Send the user message to the chat
+        const userSpeaker = chatData.speaker.alias;
+        const newMessageText = message;
+        // Create structured user message and add to session
+        const userMessage: DMChatMessage = { speaker: userSpeaker, message: newMessageText };
+        sendChatMessage(`${userSpeaker}: ${newMessageText}`);
+        await contextManager.addChatMessage(userMessage);
 
-        let response: string = "";
-        let chatHistory: string[] = await contextManager.getChatHistory(); // Get the chat history
+        // Generate structured AI messages with JSON schema
+        // Prepare simple chat history array
+        const dmHistory = await contextManager.getChatMessages();
+        const history = dmHistory.map(m => `${m.speaker}: ${m.message}`);
+        let aiMessages: DMChatMessage[] = [];
         try {
-            response = await contextManager.textGenerationClient.generateText(newMessage, chatHistory); // Generate the AI response
+            aiMessages = await contextManager.textGenerationClient.generateText<DMChatMessage[]>(
+                newMessageText,
+                history,
+                undefined,
+                undefined,
+                MessageSchema
+            );
         } catch (error) {
-            contextManager.logger.error("Error generating text:", error);
+            contextManager.logger.error("Error generating structured AI messages:", error);
             return;
         }
 
-        // Remove the asterisks from the response
-        response = response.replace(/\*\*(.*?)\*\*/g, "$1");
 
-        contextManager.addChatHistory(newMessage);
-        contextManager.addChatHistory(response);
-        sendChatMessage(response); // Send the AI response to the chat
-
-        // Have the TTS speak the response
-        if (contextManager.textToSpeechClient) {
-            try {
-                await contextManager.textToSpeechClient.speak(response);
-            } catch (error) {
-                contextManager.logger.error("Error speaking text:", error);
+        // Append and deliver each AI message
+        for (const msg of aiMessages) {
+            sendChatMessage(`${msg.speaker}: ${msg.message}`);
+            await contextManager.addChatMessage(msg);
+            // Send to TTS
+            if (contextManager.textToSpeechClient) {
+                try {
+                    await contextManager.textToSpeechClient.speak(msg.message);
+                } catch (error) {
+                    contextManager.logger.error("Error speaking text:", error);
+                }
             }
         }
+
 
         // Check if any tools should be fired
         if (contextManager.tools.length > 0) {
@@ -87,7 +102,9 @@ class ChatCommand implements ICommand {
         Do not respond with anything else
         `
 
-        const chatHistory: string[] = await contextManager.getChatHistory(); // Get the chat history
+        // Use structured chat messages for tool prompt context
+        const dmMessages = await contextManager.getChatMessages();
+        const chatHistory = dmMessages.map(m => `${m.speaker}: ${m.message}`);
         const response: string = await contextManager.textGenerationClient.generateText(prompt, chatHistory);
 
         if (response.trim() === "None") {

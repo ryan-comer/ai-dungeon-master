@@ -3,6 +3,9 @@ import { Session } from "../models/Session";
 import { Setting } from "../models/Setting";
 import { Storyline } from "../models/Storyline";
 
+import { SessionPlayer } from "../models/SessionPlayer";
+import { Player } from "../models/Player";
+
 class ChatData {
     user: string;
     speaker: any;
@@ -32,7 +35,15 @@ interface ICoreManager {
     createSession(settingName: string, campaignName: string, sessionName: string): Promise<Session>;
     getSession(settingName: string, campaignName: string, sessionName: string): Promise<Session | null>;
     getSessions(settingName: string, campaignName: string): Promise<Session[]>;
-    startSession(settingName: string, campaignName: string, sessionName: string): Promise<void>;
+    startSession(settingName: string, campaignName: string, sessionName: string, players?: SessionPlayer[]): Promise<void>;
+
+    // Session player control methods
+    getSessionPlayers(): Promise<SessionPlayer[]>;
+    setPlayerControl(playerName: string, isAIControlled: boolean): Promise<void>;
+    setSessionPlayers(players: SessionPlayer[]): Promise<void>;
+
+    // Retrieve players from Foundry
+    getPlayers(): Promise<Player[]>;
 
     // Event handlers
     on(event: string, callback: (...args: any[]) => void): void;
