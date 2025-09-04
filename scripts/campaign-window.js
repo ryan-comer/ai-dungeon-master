@@ -116,6 +116,21 @@ export class CampaignWindow extends Application {
             }
 
             await this.refreshCampaigns();
+            // Save uploaded manuals
+            const playerInput = document.getElementById('player-manual-upload');
+            if (playerInput && playerInput.files && playerInput.files.length > 0) {
+                const originalFile = playerInput.files[0];
+                const renamedFile = new File([originalFile], 'player-manual.pdf', { type: originalFile.type });
+                const destPath = this.coreManager.fileStore.getCampaignPath(settingName, campaign.name);
+                await FilePicker.upload('data', destPath, renamedFile, {});
+            }
+            const gmInput = document.getElementById('gm-manual-upload');
+            if (gmInput && gmInput.files && gmInput.files.length > 0) {
+                const originalGm = gmInput.files[0];
+                const renamedGm = new File([originalGm], 'gm-manual.pdf', { type: originalGm.type });
+                const destPath = this.coreManager.fileStore.getCampaignPath(settingName, campaign.name);
+                await FilePicker.upload('data', destPath, renamedGm, {});
+            }
         } finally {
             this._setLoadingState(false, "Idle");
             createCampaignButton.disabled = false; // Re-enable button
