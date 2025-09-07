@@ -23,7 +23,8 @@
     "path-browserify": "^1.0.1",
     "tsc-alias": "^1.8.12",
     "tsx": "^4.19.3",
-    "typescript": "^5.8.3"
+    "typescript": "^5.8.3",
+    "unpdf": "^1.2.2"
   },
   "devDependencies": {
     "@league-of-foundry-developers/foundry-vtt-types": "^12.331.3-beta",

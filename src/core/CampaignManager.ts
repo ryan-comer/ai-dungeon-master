@@ -4,6 +4,7 @@ import { IEntityManager } from "./interfaces/IEntityManager";
 
 import { IFileStore } from "../utils/interfaces/IFileStore";
 import { ILogger } from "../utils/interfaces/ILogger";
+import { FoundryPdfChunker } from "../utils/FoundryPdfChunker";
 
 import { ITextGenerationClient } from "../generation/clients/interfaces/ITextGenerationClient";
 import { OllamaClient } from "../generation/clients/OllamaClient";
@@ -30,6 +31,7 @@ class CampaignManager implements ICampaignManager {
     private textGenerationClient: ITextGenerationClient;
     private imageGenerationClient: IImageGenerationClient;
     private entityManager: IEntityManager;
+    private pdfChunker: FoundryPdfChunker;
 
     constructor(textGenerationClient: ITextGenerationClient, imageGenerationClient: IImageGenerationClient, iFileStore: IFileStore, entityManager:IEntityManager, logger: ILogger) {
         this.textGenerationClient = textGenerationClient;
@@ -37,6 +39,7 @@ class CampaignManager implements ICampaignManager {
         this.fileStore = iFileStore;
         this.logger = logger;
         this.entityManager = entityManager;
+        this.pdfChunker = new FoundryPdfChunker(logger);
     }
 
     async createSetting(userPrompt: string): Promise<Setting> {
@@ -106,6 +109,37 @@ class CampaignManager implements ICampaignManager {
         await this.initializeLocations(settingJson, campaignJson, null);
 
         return campaignJson;
+    }
+
+    async processPdfManuals(settingName: string, campaignName: string, playerManualPath?: string, gmManualPath?: string): Promise<void> {
+        this.logger.info("Processing PDF manuals for campaign");
+        
+        try {
+            // Get the campaign directory
+            const campaignDir = this.fileStore.getCampaignDirectory(settingName, campaignName);
+            
+            // Process player manual if provided
+            if (playerManualPath) {
+                this.logger.info("Chunking player manual");
+                await this.pdfChunker.chunkPdfFromFoundry(playerManualPath, campaignDir, 'player');
+            }
+            
+            // Process GM manual if provided
+            if (gmManualPath) {
+                this.logger.info("Chunking GM manual");
+                await this.pdfChunker.chunkPdfFromFoundry(gmManualPath, campaignDir, 'gm');
+            }
+            
+            this.logger.info("PDF manual processing completed");
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            this.logger.info("PDF processing failed: " + errorMessage);
+            // Log the paths for manual processing later
+            if (playerManualPath || gmManualPath) {
+                this.logger.info(`PDF files saved to be processed later: Player: ${playerManualPath}, GM: ${gmManualPath}`);
+            }
+            throw error;
+        }
     }
 
     async createStoryline(settingName: string, campaignName: string, milestoneIndex: number, userPrompt: string): Promise<Storyline> {

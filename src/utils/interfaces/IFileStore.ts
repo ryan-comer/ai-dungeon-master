@@ -44,6 +44,7 @@ interface IFileStore {
     saveSemanticIndex(setting: Setting, campaign: Campaign, entityType: EntityType, index: any): Promise<void>;
 
     getBasePath(): string;
+    getCampaignDirectory(settingName: string, campaignName: string): string;
     saveFile(filePath: string, data: string): Promise<void>;
     saveImage(filePath: string, data: string): Promise<void>;
 }

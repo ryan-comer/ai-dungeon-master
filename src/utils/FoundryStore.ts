@@ -467,67 +467,6 @@ class FoundryStore implements IFileStore {
             console.log("File loaded successfully: ", filePath)
             return response.text();
         }
-
-        /*
-        console.log("Loading file: ", filePath)
-
-        const pack = game.packs?.get(this.compendiumName);
-        if (!pack) {
-            throw new Error(`Compendium ${this.compendiumName} not found.`);
-        }
-
-        // Parse the path to get the folder names and file name
-        const folderNames:string[] = filePath.split('/');
-        console.log("Folder names: ", folderNames)
-        const fileName = folderNames.pop() as string;
-        console.log("File name: ", fileName)
-
-        // Get the top level folder
-        let folder: any = pack.folders.find((f: any) => f.name === folderNames[0] && f.parent === null);
-        if (!folder) {
-            console.error(`Folder ${folderNames[0]} not found in compendium ${this.compendiumName}.`);
-            return null;
-        }
-        console.log("Top level folder: ", folder.name)
-
-        // Loop through the folder names and find the last folder
-        for(let i = 1; i < folderNames.length; i++) {
-            const folderName = folderNames[i];
-            folder = folder.children.find((f: any) => f.folder.name === folderName);
-            if (!folder) {
-                console.error(`Folder ${folderName} not found in compendium ${this.compendiumName}.`);
-                return null;
-            }
-
-            console.log("Folder: ", folder.folder.name)
-            console.dir(folder)
-        }
-
-        // Loop through the children and get the settings
-        const entryRef = folder.entries.find((e: any) => e.name === fileName);
-        if (!entryRef) {
-            console.error(`Entry ${fileName} not found in folder ${folder.folder.name}.`);
-            return null;
-        }
-        const entry:any = await pack.getDocument(entryRef._id).catch(() => null);
-        if (!entry) {
-            console.error(`Entry ${fileName} not found in compendium ${this.compendiumName}.`);
-            return null;
-        }
-        const page = entry.pages.find((p: any) => p.name === fileName);
-        if (!page) {
-            console.error(`Page ${fileName} not found in entry ${entry.name}.`);
-            return null;
-        }
-        // Parse the content of the page
-        const content = page.text.content;
-        if (!content) {
-            console.error(`Content not found in page ${fileName}.`);
-            return null;
-        }
-
-        return content;
-        */
     }
 
     // Get the Folders at the path
@@ -640,6 +579,10 @@ class FoundryStore implements IFileStore {
         settingName = stripInvalidFilenameChars(settingName);
         campaignName = stripInvalidFilenameChars(campaignName);
         return `${this.getBasePath()}/settings/${settingName}/${campaignName}`;
+    }
+
+    getCampaignDirectory(settingName: string, campaignName: string): string {
+        return this.getCampaignPath(settingName, campaignName);
     }
 
     getStorylinePath(settingName: string, campaignName: string, storylineName: string): string {

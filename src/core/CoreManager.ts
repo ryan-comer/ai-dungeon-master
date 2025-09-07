@@ -109,6 +109,14 @@ class CoreManager implements ICoreManager {
         });
     }
 
+    async processPdfManuals(settingName: string, campaignName: string, playerManualPath?: string, gmManualPath?: string): Promise<void> {
+        return this.creationLock.runExclusive(async () => { // Use the lock
+            this.logger.info("Processing PDF manuals...");
+            await this.campaignManager.processPdfManuals(settingName, campaignName, playerManualPath, gmManualPath);
+            this.emit("pdfManualsProcessed", { settingName, campaignName }); // Emit event
+        });
+    }
+
     async getSetting(settingName: string): Promise<Setting | null> {
         return this.campaignManager.getSetting(settingName);
     }

@@ -356,6 +356,10 @@ class FileSystemStore implements IFileStore {
         return basePath
     }
 
+    getCampaignDirectory(settingName: string, campaignName: string): string {
+        return path.join(this.basePath, "settings", stripInvalidFilenameChars(settingName), stripInvalidFilenameChars(campaignName));
+    }
+
     getBasePath(): string {
         return this.basePath;
     }

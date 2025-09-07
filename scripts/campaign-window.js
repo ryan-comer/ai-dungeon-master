@@ -47,6 +47,7 @@ export class CampaignWindow extends Application {
 
         this.startSessionButton = html.find('#start-session-btn');
         this.sessionPrompt = html.find('#session-prompt');
+        this.processingStatus = html.find('#processing-status');
 
         this.createSettingButton.click(this._onCreateSetting.bind(this));
         this.createCampaignButton.click(this._onCreateCampaign.bind(this));
@@ -115,22 +116,46 @@ export class CampaignWindow extends Application {
                 await this.coreManager.createStoryline(settingName, campaign.name, i, campaign.milestones[i].description);
             }
 
-            await this.refreshCampaigns();
-            // Save uploaded manuals
+            // Handle PDF manual uploads and chunking
             const playerInput = document.getElementById('player-manual-upload');
-            if (playerInput && playerInput.files && playerInput.files.length > 0) {
-                const originalFile = playerInput.files[0];
-                const renamedFile = new File([originalFile], 'player-manual.pdf', { type: originalFile.type });
-                const destPath = this.coreManager.fileStore.getCampaignPath(settingName, campaign.name);
-                await FilePicker.upload('data', destPath, renamedFile, {});
-            }
             const gmInput = document.getElementById('gm-manual-upload');
-            if (gmInput && gmInput.files && gmInput.files.length > 0) {
-                const originalGm = gmInput.files[0];
-                const renamedGm = new File([originalGm], 'gm-manual.pdf', { type: originalGm.type });
-                const destPath = this.coreManager.fileStore.getCampaignPath(settingName, campaign.name);
-                await FilePicker.upload('data', destPath, renamedGm, {});
+            
+            // Save uploaded manuals and prepare for processing
+            if (playerInput?.files?.length > 0 || gmInput?.files?.length > 0) {
+                this._setLoadingState(true, "Uploading PDF manuals...");
+                
+                let playerManualPath = null;
+                let gmManualPath = null;
+                
+                if (playerInput?.files?.length > 0) {
+                    const originalFile = playerInput.files[0];
+                    const renamedFile = new File([originalFile], 'player-manual.pdf', { type: originalFile.type });
+                    const destPath = this.coreManager.fileStore.getCampaignDirectory(settingName, campaign.name);
+                    const uploadResult = await FilePicker.upload('data', destPath, renamedFile, {});
+                    playerManualPath = uploadResult.path;
+                }
+                
+                if (gmInput?.files?.length > 0) {
+                    const originalGm = gmInput.files[0];
+                    const renamedGm = new File([originalGm], 'gm-manual.pdf', { type: originalGm.type });
+                    const destPath = this.coreManager.fileStore.getCampaignDirectory(settingName, campaign.name);
+                    const uploadResult = await FilePicker.upload('data', destPath, renamedGm, {});
+                    gmManualPath = uploadResult.path;
+                }
+
+                // Process PDFs automatically
+                try {
+                    this._setLoadingState(true, "Processing PDF manuals for RAG workflow...");
+                    await this.coreManager.processPdfManuals(settingName, campaign.name, playerManualPath, gmManualPath);
+                    ui.notifications.info("PDF manuals have been uploaded and processed automatically!");
+                } catch (error) {
+                    console.error("Automatic PDF processing failed:", error);
+                    ui.notifications.error("Failed to process PDF manuals automatically: " + error.message);
+                    ui.notifications.warn("PDFs were uploaded but could not be processed. Please check the console for details.");
+                }
             }
+
+            await this.refreshCampaigns();
         } finally {
             this._setLoadingState(false, "Idle");
             createCampaignButton.disabled = false; // Re-enable button
