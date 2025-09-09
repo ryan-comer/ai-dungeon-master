@@ -286,7 +286,7 @@ class ContextManager implements IContextManager {
             const segment = session.chatMessages.slice(startIndex, endIndex);
             const sessionText = segment.map(msg => `${msg.speaker}: ${msg.message}`).join("\n");
             const summaryPrompt = `
-            The following is the chat history for a DND session.
+            The following is the chat history for a tabletop RPG session.
             Summarize what happened in the last session and provide a brief overview of the events, characters, and locations involved.
             Only reply with the summary and do not include any system messages or instructions.
             The chat history is as follows:
@@ -466,6 +466,20 @@ class ContextManager implements IContextManager {
             this.currentSession.name,
             this.currentSession
         );
+    }
+
+    /**
+     * Get the currently loaded setting
+     */
+    getCurrentSetting(): Setting | null {
+        return this.loadedSetting;
+    }
+
+    /**
+     * Get the currently loaded campaign
+     */
+    getCurrentCampaign(): Campaign | null {
+        return this.loadedCampaign;
     }
 
 }

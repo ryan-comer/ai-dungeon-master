@@ -5,14 +5,17 @@ import { sendChatMessage } from "../utils/utils";
 import { ChatMessage as DMChatMessage } from "../core/models/ChatMessage";
 import { MessageSchema } from "../core/models/google/MessageSchema";
 import { ITool } from "../tools/interfaces/ITool";
+import { GoogleClient } from "../generation/clients/GoogleClient";
+import { RAGManager } from "../core/RAGManager";
 
 class ChatCommand implements ICommand {
     name: string;
     description: string;
+    private ragManager: RAGManager | null = null;
 
     constructor() {
         this.name = "ChatCommand";
-        this.description = "Command for the AI DM to process a user message and generate a response.";
+        this.description = "Command for the AI DM to process a user message and generate a response with RAG support.";
     }
 
     async execute(message: string, chatData: ChatData, contextManager: IContextManager): Promise<any> {
@@ -31,24 +34,89 @@ class ChatCommand implements ICommand {
         sendChatMessage(`${userSpeaker}: ${newMessageText}`);
         await contextManager.addChatMessage(userMessage);
 
+        // Check if we can use RAG
+        const setting = contextManager.getCurrentSetting();
+        const campaign = contextManager.getCurrentCampaign();
+        const canUseRAG = setting && campaign && 
+                         contextManager.textGenerationClient instanceof GoogleClient;
+
+        if (canUseRAG && !this.ragManager) {
+            // Initialize RAG manager if not already done
+            this.ragManager = new RAGManager(
+                contextManager.textGenerationClient as GoogleClient,
+                contextManager.fileStore,
+                contextManager.logger
+            );
+        }
+
         // Generate structured AI messages with JSON schema
         // Prepare simple chat history array
         const dmHistory = await contextManager.getChatMessages();
         const history = dmHistory.map(m => `${m.speaker}: ${m.message}`);
         let aiMessages: DMChatMessage[] = [];
-        try {
-            aiMessages = await contextManager.textGenerationClient.generateText<DMChatMessage[]>(
-                newMessageText,
-                history,
-                undefined,
-                undefined,
-                MessageSchema
-            );
-        } catch (error) {
-            contextManager.logger.error("Error generating structured AI messages:", error);
-            return;
-        }
 
+        try {
+            if (canUseRAG && this.ragManager && setting && campaign) {
+                // Use RAG-enhanced generation
+                contextManager.logger.info("Using RAG-enhanced generation for user message");
+                
+                // Create a comprehensive prompt that includes the user message and context
+                const ragPrompt = this.buildRAGPrompt(newMessageText, history);
+                
+                const ragResponse = await this.ragManager.generateWithRAG(
+                    ragPrompt,
+                    setting.name,
+                    campaign.name,
+                    history
+                );
+
+                // Convert the RAG response to structured messages
+                if (ragResponse.finalResponse) {
+                    // Parse the final response as structured messages or create a narrator message
+                    try {
+                        // Try to parse as structured output first
+                        aiMessages = await contextManager.textGenerationClient.generateText<DMChatMessage[]>(
+                            `Convert this response to structured chat messages:\n${ragResponse.finalResponse}`,
+                            [],
+                            undefined,
+                            undefined,
+                            MessageSchema
+                        );
+                    } catch (error) {
+                        // Fallback: create a single narrator message
+                        contextManager.logger.warn("Failed to structure RAG response, using fallback");
+                        aiMessages = [{
+                            speaker: "Narrator",
+                            message: ragResponse.finalResponse
+                        }];
+                    }
+                    
+                    // Log search results if any
+                    if (ragResponse.searchResults && ragResponse.searchResults.length > 0) {
+                        contextManager.logger.info(
+                            `RAG search found ${ragResponse.searchResults.length} relevant sections from manuals`
+                        );
+                    }
+                }
+            } else {
+                // Standard generation without RAG
+                contextManager.logger.info("Using standard generation (no RAG available)");
+                aiMessages = await contextManager.textGenerationClient.generateText<DMChatMessage[]>(
+                    newMessageText,
+                    history,
+                    undefined,
+                    undefined,
+                    MessageSchema
+                );
+            }
+        } catch (error) {
+            contextManager.logger.error("Error generating AI messages:", error);
+            // Fallback response
+            aiMessages = [{
+                speaker: "Narrator",
+                message: "I apologize, but I'm having trouble processing that request right now. Please try again."
+            }];
+        }
 
         // Append and deliver each AI message
         for (const msg of aiMessages) {
@@ -64,8 +132,7 @@ class ChatCommand implements ICommand {
             }
         }
 
-
-        // Check if any tools should be fired
+        // Check if any tools should be fired (existing tool logic)
         if (contextManager.tools.length > 0) {
             const toolsToFire = await this.checkForTools(contextManager);
             for (const tool of toolsToFire || []) {
@@ -73,6 +140,29 @@ class ChatCommand implements ICommand {
                 await tool.run(contextManager); // Run the tool
             }
         }
+    }
+
+    /**
+     * Build a comprehensive prompt for RAG that includes context about the game state
+     */
+    private buildRAGPrompt(userMessage: string, chatHistory: string[]): string {
+        const recentHistory = chatHistory.slice(-10).join('\n'); // Last 10 messages for context
+        
+        return `
+You are an AI Dungeon Master running a tabletop RPG game. A player has just sent you this message:
+
+"${userMessage}"
+
+Recent conversation context:
+${recentHistory}
+
+Please respond as the Dungeon Master would. If you need specific information about rules, mechanics, spells, equipment, monsters, or other game content to provide an accurate response, you should search the relevant manuals.
+
+Use search_player_manual for information that players would typically know (character creation, spells, equipment, basic rules).
+Use search_gm_manual for information that is typically for the GM (monsters, NPCs, adventure content, advanced rules).
+
+Provide a complete and engaging response that moves the story forward and follows the established rules and lore of the game.
+`;
     }
 
     help(): string {

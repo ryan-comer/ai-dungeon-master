@@ -469,7 +469,7 @@ class CreateEncounterTool implements ITool {
 
     getEntityPlacementPrompt(encounter: Encounter): string {
         return `
-        I am going to give you a battlemap image of an encounter for DnD.
+        I am going to give you a battlemap image of an encounter for a tabletop RPG game.
         I am also going to give you JSON that describes the encounter.
         This JSON includes the entities that are in the encounter.
         I want you to tell me where on the map the entities should be placed.

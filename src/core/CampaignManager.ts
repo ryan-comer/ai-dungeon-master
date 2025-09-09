@@ -44,7 +44,7 @@ class CampaignManager implements ICampaignManager {
 
     async createSetting(userPrompt: string): Promise<Setting> {
         const prompt: string = `
-            Create a setting for a campaign in dnd. This will be a high-level description of the world, its inhabitants, places, and the general state of things.
+            Create a setting for a campaign in a tabletop RPG game. This will be a high-level description of the world, its inhabitants, places, and the general state of things.
             This setting will be used to generate storylines for players to play through.
             Make the setting super interesting and unique, and make sure it has a lot of potential for cool stories and adventures.
             Be as descriptive as possible, and make sure to include all the key elements of the setting. This will be used as the foundation for the campaign.
@@ -156,7 +156,7 @@ class CampaignManager implements ICampaignManager {
         const milestone = JSON.parse(campaign).milestones[milestoneIndex];
 
         const prompt = `
-        Create a storyline for a dnd campaign. This will be a self-contained story within the context of the campaign.
+        Create a storyline for a tabletop RPG game. This will be a self-contained story within the context of the campaign.
 
         This is the setting for the campaign:
         ${setting}

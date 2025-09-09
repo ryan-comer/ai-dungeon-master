@@ -27,12 +27,15 @@ import { ITextToSpeechClient } from "../generation/clients/interfaces/ITextToSpe
 import { Session } from "./models/Session";
 import { SessionPlayer } from "./models/SessionPlayer";
 import { Player } from "./models/Player";
+import { RAGManager } from "./RAGManager";
+import { GoogleClient } from "../generation/clients/GoogleClient";
 
 class CoreManager implements ICoreManager {
     public campaignManager: ICampaignManager;
     public contextManager: IContextManager
     public entityManager: IEntityManager;
     public encounterManager: IEncounterManager;
+    public ragManager: RAGManager | null = null; // RAG manager for manual search functionality
     public fileStore: IFileStore;
 
     private logger: ILogger;
@@ -57,6 +60,14 @@ class CoreManager implements ICoreManager {
         this.creationLock = new Mutex(); // Initialize the Mutex
         this.contextManager = new ContextManager(textGenerationClient, imageGenerationClient, textToSpeechClient, fileStore, this.entityManager, logger, this.tools); // Initialize the context manager
         this.eventEmitter = new EventEmitter(); // Initialize the EventEmitter
+
+        // Initialize RAG manager if the text generation client is GoogleClient
+        if (textGenerationClient instanceof GoogleClient) {
+            this.ragManager = new RAGManager(textGenerationClient, fileStore, logger);
+            this.logger.info("RAG manager initialized with Google function calling support");
+        } else {
+            this.logger.warn("RAG manager not initialized - requires GoogleClient for function calling");
+        }
 
         this.encounterManager = new EncounterManager(); // Initialize the encounter manager
         this.encounterManager.init(this.contextManager); // Pass the context manager to the encounter manager
@@ -179,6 +190,27 @@ class CoreManager implements ICoreManager {
 
     async getPlayers(): Promise<Player[]> {
         return this.contextManager.getPlayers();
+    }
+
+    /**
+     * Generate a response with RAG capabilities
+     * @param prompt The prompt to generate a response for
+     * @param chatHistory Optional chat history for context
+     * @returns RAG-enhanced response
+     */
+    async generateWithRAG(prompt: string, chatHistory?: string[]): Promise<any> {
+        if (!this.ragManager) {
+            throw new Error("RAG manager not available. Requires GoogleClient.");
+        }
+
+        const setting = this.loadedSetting;
+        const campaign = this.loadedCampaign;
+        
+        if (!setting || !campaign) {
+            throw new Error("No active setting or campaign loaded");
+        }
+
+        return await this.ragManager.generateWithRAG(prompt, setting.name, campaign.name, chatHistory);
     }
 
     // User sent a message to the AI Dungeon Master

@@ -44,6 +44,10 @@ interface IContextManager {
      * Set multiple players control flags in the current session and persist.
      */
     setSessionPlayers(players: SessionPlayer[]): Promise<void>;
+
+    // Add getters for current setting and campaign
+    getCurrentSetting(): Setting | null;
+    getCurrentCampaign(): Campaign | null;
 }
 
 export { IContextManager };

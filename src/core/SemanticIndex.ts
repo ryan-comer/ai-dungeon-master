@@ -57,8 +57,7 @@ class SemanticIndex implements ISemanticIndex {
 
         I want you to return the result in the following JSON format:
         {
-            "name": "Entity Name",
-            "context": "Entity Description"
+            "name": "Entity Name"
         }
 
         Your purpose is to be a 'semantic index' that can find the exact entity in the list that semantically matches the given entity.
@@ -75,7 +74,7 @@ class SemanticIndex implements ISemanticIndex {
             type: Type.OBJECT,
             properties: {
                 name: { type: Type.STRING },
-                context: { type: Type.STRING },
+                //context: { type: Type.STRING },
                 result: { type: Type.STRING }
             }
         };
@@ -90,7 +89,7 @@ class SemanticIndex implements ISemanticIndex {
         console.log(`Entity lookup prompt: ${indexPrompt}`);
         console.log(`Semantic index response: ${JSON.stringify(response, null, 2)}`);
 
-        if (response.result === 'none' && !response.name && !response.context) {
+        if (response.result === 'none' && !response.name) {
             return null;
         }
 
