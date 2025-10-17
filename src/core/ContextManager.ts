@@ -31,6 +31,8 @@ import { ChatMessage as DMChatMessage } from "./models/ChatMessage";
 import { stripInvalidFilenameChars } from "../utils/utils";
 import { cons } from "fp-ts/lib/ReadonlyNonEmptyArray";
 
+import { RAGManager } from "./RAGManager";
+
 class ContextManager implements IContextManager {
 
     public textGenerationClient: ITextGenerationClient;
@@ -39,6 +41,7 @@ class ContextManager implements IContextManager {
     public fileStore: IFileStore;
     public logger: ILogger;
     public tools: ITool[] = []; // Store all available tools
+    public ragManager?: RAGManager; // Optional RAG manager
 
     private entityManager: IEntityManager;
 
@@ -47,7 +50,7 @@ class ContextManager implements IContextManager {
     private commands: {name: string, command: ICommand}[] = []; // Store the commands
 
     private currentSession: Session | null = null; // Store the current session
-
+    
     constructor(
         textGenerationClient: ITextGenerationClient,
         imageGenerationClient: IImageGenerationClient,
@@ -55,7 +58,8 @@ class ContextManager implements IContextManager {
         fileStore: IFileStore,
         entityManager: IEntityManager,
         logger: ILogger,
-        tools: ITool[] // Accept tools as a parameter
+        tools: ITool[], // Accept tools as a parameter
+        ragManager?: RAGManager // Optionally accept a RAG manager
     ) {
         this.textGenerationClient = textGenerationClient;
         this.imageGenerationClient = imageGenerationClient;
@@ -64,6 +68,7 @@ class ContextManager implements IContextManager {
         this.logger = logger;
         this.entityManager = entityManager;
         this.tools = tools; // Initialize tools
+        this.ragManager = ragManager;
 
         this.commands = [
             {name: "/aidm", command: new ChatCommand()},
@@ -71,6 +76,8 @@ class ContextManager implements IContextManager {
             {name: "/aiencounter", command: new EncounterCommand()},
         ]
     }
+
+
 
     // Get the list of players in the campaign
     async getPlayers (): Promise<Player[]> {
@@ -114,27 +121,57 @@ class ContextManager implements IContextManager {
         return players;
     }
 
+
+
     async loadContext(setting: Setting, campaign: Campaign, session: Session): Promise<Context | null> {
         // Implement the logic to load the context based on settingName and campaignName
-        // For now, returning null as a placeholder
         this.loadedSetting = setting;
         this.loadedCampaign = campaign;
 
+        // Get the initial prompt (always generate fresh to reflect current context like players)
         const prompt: string = await this.getInitialPrompt();
-
-        // Check if we need to get the initial prompt
+        
+        // Check if this is a new session or we need to update the initial prompt
         if (session.chatMessages.length === 0) {
-            console.log("Adding initial system prompt to chat messages...");
-            // Add system prompt as Narrator
-            session.chatMessages.push({ speaker: 'Narrator', message: prompt });
-            // Generate structured chat messages from AI using shared schema
-            const aiMessages = await this.textGenerationClient.generateText<DMChatMessage[]>(
-                prompt,
-                undefined,
-                undefined,
-                undefined,
-                MessageSchema
-            );
+            console.log("Adding initial system prompt to new session...");
+            
+            // Always add the base prompt first as context
+            session.chatMessages.push({ speaker: 'System', message: prompt });
+            
+            let aiMessages: DMChatMessage[];
+            
+            // If RAG is available, use it with a two-pass approach
+            if (this.ragManager) {
+                const ragResult = await this.ragManager.generateWithRAG(prompt, this.loadedSetting.name, this.loadedCampaign.name);
+                
+                // Second pass: convert RAG response to structured messages
+                try {
+                    aiMessages = await this.textGenerationClient.generateText<DMChatMessage[]>(
+                        `Convert this response to structured chat messages with appropriate speakers:\n${ragResult.finalResponse}`,
+                        [],
+                        {model: 'gemini-2.5-flash-lite'},
+                        undefined,
+                        MessageSchema
+                    );
+                } catch (error) {
+                    // Fallback: create a single narrator message
+                    this.logger.warn("Failed to structure RAG response, using fallback");
+                    aiMessages = [{
+                        speaker: "Narrator",
+                        message: ragResult.finalResponse
+                    }];
+                }
+            } else {
+                // Fallback: use regular text generation with schema
+                aiMessages = await this.textGenerationClient.generateText<DMChatMessage[]>(
+                    prompt,
+                    undefined,
+                    undefined,
+                    undefined,
+                    MessageSchema
+                );
+            }
+            
             // Append each AI message and deliver
             for (const msg of aiMessages) {
                 session.chatMessages.push(msg);
@@ -149,8 +186,14 @@ class ContextManager implements IContextManager {
             }
             this.logger.info(`Started session: ${this.loadedCampaign.name}`);
         } else {
-            // Refresh the system prompt message
-            session.chatMessages[0].message = prompt;
+            // Update the initial system prompt (first message) to reflect current context
+            console.log("Updating initial system prompt for existing session...");
+            if (session.chatMessages.length > 0 && session.chatMessages[0].speaker === 'System') {
+                session.chatMessages[0].message = prompt;
+            } else {
+                // If first message isn't System, insert the system prompt at the beginning
+                session.chatMessages.unshift({ speaker: 'System', message: prompt });
+            }
         }
 
         await this.fileStore.saveSession(this.loadedSetting.name, this.loadedCampaign.name, session.name, session); // Save the session with updated chat messages
@@ -172,13 +215,14 @@ class ContextManager implements IContextManager {
     }
 
     async startSession(setting: Setting, campaign: Campaign, sessionName: string, players?: SessionPlayer[]): Promise<void> {
-    const session: Session | null = await this.getSession(setting.name, campaign.name, sessionName);
 
+        const session: Session | null = await this.getSession(setting.name, campaign.name, sessionName);
         if (!session) {
             this.logger.error(`Session ${sessionName} not found in campaign ${campaign.name}`);
             return;
         }
         this.currentSession = session; // Set the current session
+
         // Initialize session players: use provided flags or default to human-controlled
         if (players && players.length > 0) {
             this.currentSession.players = players;
@@ -192,7 +236,6 @@ class ContextManager implements IContextManager {
         }
 
         // Load the context for the session
-        console.log("Loaded context:", this.currentSession);
         await this.loadContext(setting, campaign, this.currentSession);
         console.log("Loaded context:", this.currentSession);
 
@@ -298,7 +341,7 @@ class ContextManager implements IContextManager {
         return "";
     }
 
-    // Get the initial prompt for the AI DM
+    // Get the initial prompt for the AI DM, using RAG if available
     async getInitialPrompt(): Promise<string> {
         if (!this.loadedSetting || !this.loadedCampaign) {
             this.logger.error("No loaded setting or campaign to generate prompt.");
@@ -309,10 +352,10 @@ class ContextManager implements IContextManager {
         const locations: Location[] = await this.entityManager.getLocations(this.loadedSetting, this.loadedCampaign);
         const factions: Faction[] = await this.entityManager.getFactions(this.loadedSetting, this.loadedCampaign);
         const players: Player[] = await this.getPlayers();
-        // Include AI-controlled players for dialogue
         const aiPlayers = this.currentSession?.players.filter(p => p.isAIControlled).map(p => p.name) || [];
 
-        return `
+        // Compose the original base prompt
+        const basePrompt = `
         You are a text-based AI Dungeon Master (DM) for a tabletop role-playing game (RPG).
         You will provide a narrative and respond to player actions in a collaborative storytelling experience.
         Your goal is to create an engaging and immersive story for the players.
@@ -324,42 +367,14 @@ class ContextManager implements IContextManager {
         You will also be able to generate random events and encounters to keep the game interesting.
         You will use your knowledge of RPG mechanics and storytelling techniques to create a balanced and enjoyable experience for the players.
 
-        The game mechanics are from the 5th edition of Dungeons and Dragons (D&D 5e).
-        You will use the rules and mechanics of D&D 5e to create a fair and balanced game for the players.
+        The game mechanics are available to you through tools that you can call. Make sure to call the tools whenever you need the information or functionality they provide.
+        You will use the rules and mechanics to create a fair and balanced game for the players.
+        Do not assume mechanics. If you need to know something about the mechanics, call the appropriate tool to get the information.
+
         You can ask the players to roll dice to resolve certain actions and events.
         Make sure to ask for roles when appropriate, and provide the players with the results of their rolls.
         The player will reply with the results of the dice rolls and any other relevant information.
         Use the results of the dice rolls to determine the outcome of actions and events in the game.
-        These are the checks that can be rolled in the game:
-        
-        Strength
-        - Athletics: Measures prowess in activities requiring physical effort, such as climbing, swimming, and jumping. For example, attempting to scale a cliff, swim across a river, or leap over a chasm would necessitate an Athletics check.
-
-        Dexterity
-        - Acrobatics: Assesses balance and agility. This check is used when attempting tasks like walking a tightrope, performing flips, or staying upright on shifting terrain.
-        - Sleight of Hand: Pertains to manual dexterity, often for tasks like pickpocketing or concealing objects. For instance, slipping something into your pocket without notice requires a Sleight of Hand check.
-        - Stealth: Determines the ability to move silently and hide from detection. Sneaking past guards or hiding from enemies involves a Stealth check.
-
-        Intelligence
-        - Arcana: Reflects knowledge of magical lore, including spells, symbols, and magical traditions. Identifying a spell being cast or recalling information about a legendary wizard would require an Arcana check.
-        - History: Measures knowledge of past events, significant people, ancient kingdoms, and historical lore. Remembering details about a historic battle or ancient civilization involves a History check.
-        - Investigation: Used to deduce information from clues, make inferences, and solve puzzles. Examining a crime scene for clues or determining the cause of a malfunctioning trap requires an Investigation check.
-        - Nature: Assesses understanding of the natural world, including flora, fauna, weather, and natural cycles. Identifying a plant species or predicting the weather involves a Nature check.
-        - Religion: Reflects knowledge of deities, religious rituals, and holy symbols. Recognizing a religious ceremony or recalling the tenets of a particular faith requires a Religion check.
-
-        Wisdom
-        - Animal Handling: Determines the ability to calm, control, or train animals. Soothing a spooked horse or teaching a dog a trick involves an Animal Handling check.
-        - Insight: Measures the ability to read people and situations, discerning true intentions or detecting lies. Sensing if someone is being deceitful or understanding a creature's mood requires an Insight check.
-        - Medicine: Pertains to the ability to diagnose illnesses, stabilize dying companions, and understand medical procedures. Stabilizing a wounded ally or identifying a disease involves a Medicine check.
-        - Perception: Reflects the ability to notice subtle details or detect hidden things. Spotting a hidden door or hearing distant footsteps requires a Perception check.
-        - Survival: Measures proficiency in outdoor skills like tracking, hunting, and navigating. Following tracks in the wilderness or finding shelter involves a Survival check.
-
-        Charisma
-        - Deception: Assesses the ability to convincingly hide the truth, whether through lies or misdirection. Bluffing your way past a guard or conning a merchant requires a Deception check.
-        - Intimidation: Determines the ability to influence others through threats or forceful presence. Coercing someone to act through threats involves an Intimidation check.
-        - Performance: Measures the ability to entertain through various forms of art, such as music, dance, or storytelling. Playing an instrument in a tavern or delivering a captivating speech requires a Performance check.
-        - Persuasion: Reflects the ability to influence others through tact, social graces, or good nature. Convincing a noble to support your cause or negotiating a deal involves a Persuasion check.
-
         If the situation arises where any of these checks make sense, then make sure you ask for the roll.
 
         Keep the campaign interesting and engaging for the players, and keep them on their toes.
@@ -376,7 +391,10 @@ class ContextManager implements IContextManager {
         ${JSON.stringify(this.loadedSetting, null, 2)}
 
         This is the campaign for the game:
-        ${JSON.stringify(this.loadedCampaign, null, 2)}
+        ${JSON.stringify((() => {
+            const { progress, ...campaignWithoutProgress } = this.loadedCampaign;
+            return campaignWithoutProgress;
+        })(), null, 2)}
 
         These are all the characters for the game:
         ${JSON.stringify(characters, null, 2)}
@@ -396,6 +414,10 @@ class ContextManager implements IContextManager {
         Do not have any player characters speak for themselves unless they are marked as AI-controlled,
         Only the AI-controlled players can speak for themselves.
 
+        Don't end the the back-and-forth dialogue until it's ready for the players to respond.
+        By players I mean the non-AI controlled players. I mean the real players.
+        If the AI players respond, then keep the dialogue going until it's the real players' turn.
+
         Start off by describing the setting and the current situation in the game world.
         Include any important characters, locations, and events that are relevant to the players.
         Make sure to set the tone and atmosphere for the game, and provide hooks for the players to engage with the story.
@@ -407,6 +429,11 @@ class ContextManager implements IContextManager {
         
         IMPORTANT: Output should be a valid JSON array of objects, each with "speaker" and "message" fields. Do NOT include any text outside the JSON array.
 
+        Remember to return an array of dialogue.
+        The DM dialogue should be them describing the world.
+        The character dialogue should be that character talking.
+        Don't have th DM dialogue include any characters talking. If the character needs to say something, then it should be in it's own dialogue
+
         Don't abruptly end the story, always let the players take actions and make decisions.
         It is possible for players to die in the game, but make sure to give them opportunities to succeed and survive.
         If a player dies, make sure to describe the situation and the consequences of their actions.
@@ -416,6 +443,10 @@ class ContextManager implements IContextManager {
         A combat encounter will start if the scenario the players are in warrants it.
         If a combat encounter starts, make sure to say 'Roll Initiative!'
         `;
+
+        // If RAG is available, use it with the full original prompt
+        // Note: This method should only be called when RAG is not being used for structured responses
+        return basePrompt;
     }
 
     getMessagePrompt(message: string): string {

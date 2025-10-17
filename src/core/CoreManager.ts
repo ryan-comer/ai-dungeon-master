@@ -29,6 +29,8 @@ import { SessionPlayer } from "./models/SessionPlayer";
 import { Player } from "./models/Player";
 import { RAGManager } from "./RAGManager";
 import { GoogleClient } from "../generation/clients/GoogleClient";
+import { EmbeddingFactory } from "../utils/EmbeddingFactory";
+import { EmbeddingService } from "./EmbeddingService";
 
 class CoreManager implements ICoreManager {
     public campaignManager: ICampaignManager;
@@ -58,16 +60,28 @@ class CoreManager implements ICoreManager {
         this.campaignManager = new CampaignManager(textGenerationClient, imageGenerationClient, fileStore, this.entityManager, logger);
         this.logger = logger;
         this.creationLock = new Mutex(); // Initialize the Mutex
-        this.contextManager = new ContextManager(textGenerationClient, imageGenerationClient, textToSpeechClient, fileStore, this.entityManager, logger, this.tools); // Initialize the context manager
-        this.eventEmitter = new EventEmitter(); // Initialize the EventEmitter
-
+        
         // Initialize RAG manager if the text generation client is GoogleClient
+        // Embedding services will be initialized when a session starts
         if (textGenerationClient instanceof GoogleClient) {
             this.ragManager = new RAGManager(textGenerationClient, fileStore, logger);
-            this.logger.info("RAG manager initialized with Google function calling support");
+            this.logger.info("RAG manager initialized with Google function calling support (embedding services will be initialized when session starts)");
         } else {
             this.logger.warn("RAG manager not initialized - requires GoogleClient for function calling");
         }
+        
+        this.contextManager = new ContextManager(
+            textGenerationClient,
+            imageGenerationClient,
+            textToSpeechClient,
+            fileStore,
+            this.entityManager,
+            logger,
+            this.tools,
+            this.ragManager ?? undefined // Pass ragManager or undefined
+        ); // Initialize the context manager
+        
+        this.eventEmitter = new EventEmitter(); // Initialize the EventEmitter
 
         this.encounterManager = new EncounterManager(); // Initialize the encounter manager
         this.encounterManager.init(this.contextManager); // Pass the context manager to the encounter manager
@@ -75,6 +89,79 @@ class CoreManager implements ICoreManager {
 
     initialize(): void {
         console.log("Initializing the core manager...");
+    }
+
+    /**
+     * Initialize RAG manager with embedding services when a campaign is loaded
+     */
+    async initializeRagWithEmbeddings(settingName: string, campaignName: string): Promise<void> {
+        if (!this.ragManager) {
+            this.logger.warn("Cannot initialize RAG with embeddings - no RAG manager available");
+            return;
+        }
+
+        const textGenerationClient = this.contextManager.textGenerationClient;
+        if (!(textGenerationClient instanceof GoogleClient)) {
+            this.logger.warn("Cannot initialize RAG with embeddings - requires GoogleClient");
+            return;
+        }
+
+        try {
+            // Only initialize if we have a Google API key
+            const googleApiKey = (game as any).settings.get("ai-dungeon-master", "googleApiKey") as string;
+            if (!googleApiKey) {
+                this.logger.warn("Google API key not found - RAG will work without embeddings");
+                return;
+            }
+
+            this.logger.info("Initializing embedding services for vector search...");
+
+            const embeddingServices = await EmbeddingFactory.createEmbeddingServices({
+                googleApiKey,
+                settingName,
+                campaignName,
+                fileStore: this.fileStore,
+                logger: this.logger
+            });
+
+            this.logger.info(`Created embedding services - Player: ${embeddingServices.playerEmbeddingService ? 'available' : 'null'}, GM: ${embeddingServices.gmEmbeddingService ? 'available' : 'null'}`);
+
+            // Update the RAG manager's ManualSearcher with embedding services
+            this.ragManager.updateManualSearcher(
+                embeddingServices.playerEmbeddingService,
+                embeddingServices.gmEmbeddingService
+            );
+
+            this.logger.info("RAG manager updated with embedding services");
+
+            // Check if embeddings need to be created
+            const status = await EmbeddingFactory.checkEmbeddingStatus(
+                embeddingServices.playerEmbeddingService,
+                embeddingServices.gmEmbeddingService
+            );
+
+            if (status.playerNeedsEmbeddings || status.gmNeedsEmbeddings) {
+                this.logger.info(`Embeddings needed - Player: ${status.playerNeedsEmbeddings}, GM: ${status.gmNeedsEmbeddings}`);
+                
+                // Create embeddings in the background
+                EmbeddingFactory.ensureEmbeddings(
+                    embeddingServices.playerEmbeddingService,
+                    embeddingServices.gmEmbeddingService,
+                    settingName,
+                    campaignName,
+                    (type, progress) => {
+                        this.logger.info(`Creating ${type} embeddings: ${progress.completed}/${progress.total}`);
+                    }
+                ).catch(error => {
+                    this.logger.error(`Error creating embeddings: ${error}`);
+                });
+            } else {
+                this.logger.info(`Embeddings already exist - Player: ${status.playerStats.count}, GM: ${status.gmStats.count}`);
+            }
+
+        } catch (error) {
+            this.logger.error(`Error initializing RAG with embedding services: ${error}`);
+        }
     }
 
     on(event: string, callback: (...args: any[]) => void): void {
@@ -102,13 +189,26 @@ class CoreManager implements ICoreManager {
         });
     }
 
-    async createCampaign(settingName: string, userPrompt: string = ""): Promise<Campaign> {
+    async createCampaign(settingName: string, userPrompt: string = "", pdfManuals?: { playerManualFile?: File, gmManualFile?: File }): Promise<Campaign> {
         return this.creationLock.runExclusive(async () => { // Use the lock
             this.logger.info("Creating a campaign...");
-            const campaign: Campaign = await this.campaignManager.createCampaign(settingName, userPrompt);
+            const campaign: Campaign = await this.campaignManager.createCampaign(settingName, userPrompt, pdfManuals);
             this.emit("campaignCreated", campaign); // Emit event
             return campaign
         });
+    }
+
+    async resumeCampaignGeneration(settingName: string, campaignName: string): Promise<Campaign> {
+        return this.creationLock.runExclusive(async () => {
+            this.logger.info(`Resuming campaign generation for ${campaignName}...`);
+            const campaign = await this.campaignManager.resumeGeneration(settingName, campaignName);
+            this.emit("campaignGenerationResumed", campaign);
+            return campaign;
+        });
+    }
+
+    async getInProgressCampaigns(): Promise<Campaign[]> {
+        return this.fileStore.getInProgressCampaigns();
     }
 
     async createStoryline(settingName: string, campaignName: string, milestoneIndex: number, userPrompt: string = ""): Promise<Storyline> {
@@ -167,8 +267,12 @@ class CoreManager implements ICoreManager {
         this.loadedSetting = setting; // Store the loaded setting
 
         this.logger.info("Loading campaign context...");
+        
+        // Initialize RAG manager with embedding services when starting a session
+        await this.initializeRagWithEmbeddings(settingName, campaignName);
+        
         this.logger.info("Campaign context loaded.");
-    await this.contextManager.startSession(setting, campaign, sessionName, players); // Start a session with optional player flags
+        await this.contextManager.startSession(setting, campaign, sessionName, players); // Start a session with optional player flags
     }
 
     async getLoadedCampaign(): Promise<Campaign | null> {

@@ -92,6 +92,36 @@ class FileSystemStore implements IFileStore {
         return campaigns;
     }
 
+    async getInProgressCampaigns(): Promise<Campaign[]> {
+        const settingsDir = path.join(this.basePath, "./settings");
+        if (!fs.existsSync(settingsDir)) {
+            return [];
+        }
+
+        const campaigns: Campaign[] = [];
+        const settingsDirs = fs.readdirSync(settingsDir).filter(file => fs.statSync(path.join(settingsDir, file)).isDirectory());
+
+        for (const settingDir of settingsDirs) {
+            const settingPath = path.join(settingsDir, settingDir);
+            const campaignDirs = fs.readdirSync(settingPath).filter(file => fs.statSync(path.join(settingPath, file)).isDirectory());
+
+            for (const campaignDir of campaignDirs) {
+                const campaignPath = path.join(settingPath, campaignDir, "campaign.json");
+                if (fs.existsSync(campaignPath)) {
+                    const campaignData = this.loadFile(campaignPath);
+                    const campaign = JSON.parse(campaignData) as Campaign;
+                    
+                    // Check if campaign has progress and is not completed
+                    if (campaign.progress && campaign.progress.stage !== 'completed' && campaign.progress.stage !== 'failed') {
+                        campaigns.push(campaign);
+                    }
+                }
+            }
+        }
+
+        return campaigns;
+    }
+
     async getSetting(settingName: string): Promise<Setting | null> {
         const filePath = this.getSettingPath(settingName);
         if (!fs.existsSync(filePath)) {
@@ -362,6 +392,15 @@ class FileSystemStore implements IFileStore {
 
     getBasePath(): string {
         return this.basePath;
+    }
+
+    async fileExists(filePath: string): Promise<boolean> {
+        try {
+            return fs.existsSync(filePath);
+        } catch (error) {
+            console.error(`Error checking file existence ${filePath}:`, error);
+            return false;
+        }
     }
 }
 

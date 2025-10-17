@@ -18,6 +18,15 @@ class FoundryStore implements IFileStore {
         this.compendiumName = compendiumName;
     }
 
+    async fileExists(filePath: string): Promise<boolean> {
+        try {
+            await FilePicker.browse('data', filePath);
+            return true;
+        } catch {
+            return false;
+        }
+    }
+
     async getSettings(): Promise<Setting[]> {
         const settingsDirectories: string[] = await this.getDirectories(`${this.getBasePath()}/settings`);
 
@@ -44,6 +53,26 @@ class FoundryStore implements IFileStore {
             }
         }
         return campaigns.length > 0 ? campaigns : [];
+    }
+
+    async getInProgressCampaigns(): Promise<Campaign[]> {
+        const campaigns: Campaign[] = [];
+        const settingDirectories: string[] = await this.getDirectories(`${this.getBasePath()}/settings`);
+        
+        for (const settingName of settingDirectories) {
+            const campaignDirectories: string[] = await this.getDirectories(`${this.getBasePath()}/settings/${settingName}`);
+            
+            for (const campaignName of campaignDirectories) {
+                const campaign = await this.getCampaign(settingName, campaignName);
+                if (campaign && campaign.progress && 
+                    campaign.progress.stage !== 'completed' && 
+                    campaign.progress.stage !== 'failed') {
+                    campaigns.push(campaign);
+                }
+            }
+        }
+        
+        return campaigns;
     }
 
     async getSessions(settingName: string, campaignName: string): Promise<Session[]> {

@@ -3,6 +3,7 @@ import { Tool, FunctionDeclaration, Type } from "@google/genai";
 import { ManualSearcher, ManualSearchResult } from "../tools/ManualSearcher";
 import { IFileStore } from "../utils/interfaces/IFileStore";
 import { ILogger } from "../utils/interfaces/ILogger";
+import { EmbeddingService } from "./EmbeddingService";
 
 export interface RAGResponse {
     finalResponse: string;
@@ -54,13 +55,30 @@ export class RAGManager {
     constructor(
         googleClient: GoogleClient,
         fileStore: IFileStore,
-        logger: ILogger
+        logger: ILogger,
+        playerEmbeddingService?: EmbeddingService,
+        gmEmbeddingService?: EmbeddingService
     ) {
         this.googleClient = googleClient;
         this.fileStore = fileStore;
         this.logger = logger;
-        this.manualSearcher = new ManualSearcher(fileStore);
+        console.log("RAG Manager constructor - Player embedding service:", playerEmbeddingService ? 'available' : 'null', ", GM embedding service:", gmEmbeddingService ? 'available' : 'null');
+        this.manualSearcher = new ManualSearcher(fileStore, playerEmbeddingService, gmEmbeddingService);
     }
+
+    /**
+     * Update the manual searcher with new embedding services
+     */
+    updateManualSearcher(
+        playerEmbeddingService?: EmbeddingService,
+        gmEmbeddingService?: EmbeddingService
+    ): void {
+        this.logger.info(`Updating RAG manager's ManualSearcher with embedding services - Player: ${playerEmbeddingService ? 'available' : 'null'}, GM: ${gmEmbeddingService ? 'available' : 'null'}`);
+        this.manualSearcher = new ManualSearcher(this.fileStore, playerEmbeddingService, gmEmbeddingService);
+        this.logger.info("RAG manager's ManualSearcher updated successfully");
+    }
+
+
 
     /**
      * Generate a response with RAG capabilities
@@ -138,12 +156,11 @@ export class RAGManager {
                     const functionCallsText = result.functionCalls.map(fc => 
                         `Function Call: ${fc.name}(${JSON.stringify(fc.args)})`
                     ).join('\n');
-                    
-                    conversationHistory.push(`Assistant: ${functionCallsText}`);
-                    conversationHistory.push(`User: ${functionResponses.join('\n\n')}`);
+
+                    conversationHistory.push(`Assistant: ${functionCallsText} ${functionResponses.join('\n\n')} `);
 
                     // Continue the conversation with the function results
-                    prompt = "Based on the search results above, please provide a comprehensive answer to the original question.";
+                    prompt = "Based on the search results above, continue the conversation. Don't say things out of character, just use the information to inform your next response.";
                     
                 } else {
                     // No more function calls, return the final response

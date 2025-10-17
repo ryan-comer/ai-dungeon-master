@@ -21,6 +21,7 @@ interface IFileStore {
 
     getSettings(): Promise<Setting[]>;
     getCampaigns(settingName: string): Promise<Campaign[]>;
+    getInProgressCampaigns(): Promise<Campaign[]>;
 
     saveSetting(settingName: string, setting: Setting): Promise<void>;
     saveCampaign(settingName: string, campaignName: string, campaign: Campaign): Promise<void>;
@@ -47,6 +48,8 @@ interface IFileStore {
     getCampaignDirectory(settingName: string, campaignName: string): string;
     saveFile(filePath: string, data: string): Promise<void>;
     saveImage(filePath: string, data: string): Promise<void>;
+    loadFile(filePath: string): Promise<string | null> | string;
+    fileExists(filePath: string): Promise<boolean>;
 }
 
 export { IFileStore };

@@ -38,6 +38,7 @@ export class CampaignWindow extends Application {
         this.playerList = html.find('#player-list');
         this.campaignList = html.find('#campaign-list');
         this.sessionList = html.find('#session-list');
+        this.progressCampaignList = html.find('#progress-campaign-list');
         this.loadingIcon = html.find('#loading-icon');
         this.statusText = html.find('#status-text');
 
@@ -66,6 +67,7 @@ export class CampaignWindow extends Application {
             await this.refreshCampaigns();
             await this.refreshSessions();
             await this.refreshPlayers();
+            await this.refreshInProgressCampaigns();
         });
     }
 
@@ -110,52 +112,31 @@ export class CampaignWindow extends Application {
         });
 
         try {
-            const campaign = await this.coreManager.createCampaign(settingName, campaignPrompt);
-
-            for (let i = 0; i < campaign.milestones.length; i++) {
-                await this.coreManager.createStoryline(settingName, campaign.name, i, campaign.milestones[i].description);
-            }
-
-            // Handle PDF manual uploads and chunking
+            // Handle PDF manual uploads - we need to store them temporarily and pass the file data
             const playerInput = document.getElementById('player-manual-upload');
             const gmInput = document.getElementById('gm-manual-upload');
             
-            // Save uploaded manuals and prepare for processing
-            if (playerInput?.files?.length > 0 || gmInput?.files?.length > 0) {
-                this._setLoadingState(true, "Uploading PDF manuals...");
-                
-                let playerManualPath = null;
-                let gmManualPath = null;
-                
-                if (playerInput?.files?.length > 0) {
-                    const originalFile = playerInput.files[0];
-                    const renamedFile = new File([originalFile], 'player-manual.pdf', { type: originalFile.type });
-                    const destPath = this.coreManager.fileStore.getCampaignDirectory(settingName, campaign.name);
-                    const uploadResult = await FilePicker.upload('data', destPath, renamedFile, {});
-                    playerManualPath = uploadResult.path;
-                }
-                
-                if (gmInput?.files?.length > 0) {
-                    const originalGm = gmInput.files[0];
-                    const renamedGm = new File([originalGm], 'gm-manual.pdf', { type: originalGm.type });
-                    const destPath = this.coreManager.fileStore.getCampaignDirectory(settingName, campaign.name);
-                    const uploadResult = await FilePicker.upload('data', destPath, renamedGm, {});
-                    gmManualPath = uploadResult.path;
-                }
-
-                // Process PDFs automatically
-                try {
-                    this._setLoadingState(true, "Processing PDF manuals for RAG workflow...");
-                    await this.coreManager.processPdfManuals(settingName, campaign.name, playerManualPath, gmManualPath);
-                    ui.notifications.info("PDF manuals have been uploaded and processed automatically!");
-                } catch (error) {
-                    console.error("Automatic PDF processing failed:", error);
-                    ui.notifications.error("Failed to process PDF manuals automatically: " + error.message);
-                    ui.notifications.warn("PDFs were uploaded but could not be processed. Please check the console for details.");
-                }
+            let pdfManuals = {};
+            
+            // Instead of uploading immediately, we'll pass the file data to be handled after campaign creation
+            if (playerInput?.files?.length > 0) {
+                pdfManuals.playerManualFile = playerInput.files[0];
+            }
+            
+            if (gmInput?.files?.length > 0) {
+                pdfManuals.gmManualFile = gmInput.files[0];
             }
 
+            // Create campaign with progressive generation
+            const campaign = await this.coreManager.createCampaign(settingName, campaignPrompt, pdfManuals);
+            ui.notifications.info("Campaign creation started! You can monitor progress below and resume if needed.");
+
             await this.refreshCampaigns();
+            await this.refreshInProgressCampaigns();
+        } catch (error) {
+            console.error("Campaign creation failed:", error);
+            ui.notifications.error("Campaign creation failed: " + error.message);
+            await this.refreshInProgressCampaigns(); // Refresh to show failed campaign
         } finally {
             this._setLoadingState(false, "Idle");
             createCampaignButton.disabled = false; // Re-enable button
@@ -329,5 +310,152 @@ export class CampaignWindow extends Application {
             item.append(checkbox, label);
             this.playerList.append(item);
         });
+    }
+
+    async refreshInProgressCampaigns() {
+        try {
+            const inProgressCampaigns = await this.coreManager.getInProgressCampaigns();
+            this.populateInProgressCampaigns(inProgressCampaigns);
+        } catch (error) {
+            console.error("Error refreshing in-progress campaigns:", error);
+        }
+    }
+
+    populateInProgressCampaigns(campaigns) {
+        this.progressCampaignList.empty();
+        
+        if (campaigns.length === 0) {
+            this.progressCampaignList.append('<p><em>No campaigns currently in progress</em></p>');
+            return;
+        }
+
+        campaigns.forEach(campaign => {
+            const progress = campaign.progress;
+            const progressPercentage = progress ? this.getOverallProgress(progress) : 0;
+            const stageText = progress ? progress.stage.replace(/_/g, ' ').toUpperCase() : 'Unknown';
+            const statusClass = this.getProgressStatusClass(progress);
+            
+            const campaignCard = $(`
+                <div class="campaign-progress-card ${statusClass}">
+                    <div class="campaign-header">
+                        <h4>${campaign.name}</h4>
+                        <span class="setting-name">(${campaign.setting})</span>
+                    </div>
+                    <div class="progress-info">
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: ${progressPercentage}%"></div>
+                        </div>
+                        <span class="progress-text">${progressPercentage}% - ${stageText}</span>
+                    </div>
+                    <div class="campaign-actions">
+                        <button class="resume-campaign-btn" data-setting="${campaign.setting}" data-campaign="${campaign.name}" 
+                                ${progress?.stage === 'completed' ? 'disabled' : ''}>
+                            ${progress?.stage === 'failed' ? 'Retry' : progress?.stage === 'completed' ? 'Complete' : 'Resume'}
+                        </button>
+                        <button class="view-progress-btn" data-setting="${campaign.setting}" data-campaign="${campaign.name}">
+                            View Details
+                        </button>
+                    </div>
+                    ${progress?.error ? `<div class="error-message">Error: ${progress.error}</div>` : ''}
+                </div>
+            `);
+            
+            this.progressCampaignList.append(campaignCard);
+        });
+
+        // Bind event handlers for the buttons
+        this.progressCampaignList.find('.resume-campaign-btn').click(this._onResumeCampaign.bind(this));
+        this.progressCampaignList.find('.view-progress-btn').click(this._onViewProgress.bind(this));
+    }
+
+    async _onResumeCampaign(event) {
+        const button = $(event.currentTarget);
+        const settingName = button.data('setting');
+        const campaignName = button.data('campaign');
+        
+        button.prop('disabled', true);
+        
+        this.logger.on("info", (message) => {
+            this._setLoadingState(true, message);
+        });
+
+        try {
+            await this.coreManager.resumeCampaignGeneration(settingName, campaignName);
+            ui.notifications.info("Campaign generation completed successfully!");
+            await this.refreshInProgressCampaigns();
+            await this.refreshCampaigns();
+        } catch (error) {
+            console.error("Campaign resume failed:", error);
+            ui.notifications.error("Failed to resume campaign generation: " + error.message);
+            await this.refreshInProgressCampaigns();
+        } finally {
+            this._setLoadingState(false, "Idle");
+            button.prop('disabled', false);
+        }
+    }
+
+    async _onViewProgress(event) {
+        const button = $(event.currentTarget);
+        const settingName = button.data('setting');
+        const campaignName = button.data('campaign');
+        
+        try {
+            const campaign = await this.coreManager.getCampaign(settingName, campaignName);
+            if (campaign && campaign.progress) {
+                this._showProgressDialog(campaign);
+            }
+        } catch (error) {
+            console.error("Error viewing progress:", error);
+            ui.notifications.error("Could not load campaign progress details.");
+        }
+    }
+
+    _showProgressDialog(campaign) {
+        const progress = campaign.progress;
+        const completedStages = progress.completedStages.map(stage => stage.replace(/_/g, ' ')).join(', ');
+        const storylineDetails = progress.storylineProgress.map(sp => 
+            `<li>${sp.milestoneName}: ${sp.completed ? '✅ Complete' : '⏳ Pending'}${sp.error ? ` (Error: ${sp.error})` : ''}</li>`
+        ).join('');
+        
+        const content = `
+            <div class="progress-details">
+                <h3>${campaign.name} Progress</h3>
+                <p><strong>Overall Progress:</strong> ${this.getOverallProgress(progress)}%</p>
+                <p><strong>Current Stage:</strong> ${progress.stage.replace(/_/g, ' ')}</p>
+                <p><strong>Completed Stages:</strong> ${completedStages || 'None'}</p>
+                
+                <h4>Storyline Progress:</h4>
+                <ul>${storylineDetails}</ul>
+                
+                ${progress.error ? `<div class="error"><strong>Error:</strong> ${progress.error}</div>` : ''}
+                <p><strong>Last Updated:</strong> ${new Date(progress.lastUpdated).toLocaleString()}</p>
+            </div>
+        `;
+
+        new Dialog({
+            title: "Campaign Generation Progress",
+            content: content,
+            buttons: {
+                close: {
+                    label: "Close"
+                }
+            },
+            default: "close"
+        }).render(true);
+    }
+
+    getOverallProgress(progress) {
+        if (!progress) return 0;
+        const completedStagesCount = progress.completedStages ? progress.completedStages.length : 0;
+        const currentStageProgress = (progress.currentStageProgress || 0) / 100;
+        const totalStages = progress.totalStages || 7;
+        return Math.round(((completedStagesCount + currentStageProgress) / totalStages) * 100);
+    }
+
+    getProgressStatusClass(progress) {
+        if (!progress) return 'in-progress';
+        if (progress.stage === 'failed') return 'failed';
+        if (progress.stage === 'completed') return 'completed';
+        return 'in-progress';
     }
 }

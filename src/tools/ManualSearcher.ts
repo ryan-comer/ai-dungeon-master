@@ -1,8 +1,8 @@
 import { PdfChunk, ChunkedManual } from "../utils/FoundryPdfChunker";
 import { IFileStore } from "../utils/interfaces/IFileStore";
 import { ITextGenerationClient } from "../generation/clients/interfaces/ITextGenerationClient";
-import * as fs from "fs";
-import * as path from "path";
+import { Schema, Type } from "@google/genai";
+import { EmbeddingService } from "../core/EmbeddingService";
 
 export interface ManualSearchResult {
     chunks: PdfChunk[];
@@ -13,15 +13,37 @@ export interface ManualSearchResult {
 
 export type ManualType = 'player' | 'gm';
 
+interface ChunkRankingResponse {
+    response: string[];
+}
+
+const CHUNK_RANKING_SCHEMA: Schema = {
+    type: Type.OBJECT,
+    properties: {
+        response: {
+            type: Type.ARRAY,
+            items: {
+                type: Type.STRING
+            },
+            description: "Array of chunk IDs ordered by relevance to the search query"
+        }
+    },
+    required: ["response"]
+};
+
 /**
  * Unified RAG Tool for searching through manual chunks (both Player and GM manuals)
  * This provides the search functionality that can be called by Google's function calling
  */
 export class ManualSearcher {
     private fileStore: IFileStore;
+    private playerEmbeddingService?: EmbeddingService;
+    private gmEmbeddingService?: EmbeddingService;
 
-    constructor(fileStore: IFileStore) {
+    constructor(fileStore: IFileStore, playerEmbeddingService?: EmbeddingService, gmEmbeddingService?: EmbeddingService) {
         this.fileStore = fileStore;
+        this.playerEmbeddingService = playerEmbeddingService;
+        this.gmEmbeddingService = gmEmbeddingService;
     }
 
     async searchPlayerManual(
@@ -49,11 +71,36 @@ export class ManualSearcher {
         textGenerationClient: ITextGenerationClient,
         manualType: ManualType
     ): Promise<ManualSearchResult> {
-        // Load manual chunks based on type
-        const campaignDir = this.fileStore.getCampaignDirectory(settingName, campaignName);
-        const manualPath = path.join(campaignDir, `${manualType}-manual-chunks.json`);
+        // First try vector search if embedding service is available
+        const embeddingService = manualType === 'player' ? this.playerEmbeddingService : this.gmEmbeddingService;
+        
+        if (embeddingService && await embeddingService.hasEmbeddings()) {
+            console.log(`Using vector search for ${manualType} manual with query: "${searchQuery}"`);
+            try {
+                const vectorResults = await embeddingService.searchRelevantChunks(searchQuery, 10, 0.3);
 
-        if (!fs.existsSync(manualPath)) {
+                console.log(`Found ${vectorResults.length} relevant chunks via vector search`);
+                console.dir(vectorResults, { depth: 3 });
+                
+                if (vectorResults.length > 0) {
+                    return {
+                        chunks: vectorResults.map(result => result.chunk),
+                        totalMatches: vectorResults.length,
+                        searchQuery,
+                        manualType
+                    };
+                }
+            } catch (error) {
+                console.warn("Vector search failed, falling back to keyword search:", error);
+            }
+        }
+
+        // Fallback to original keyword-based search
+        console.log(`Falling back to keyword-based search for ${manualType} manual with query: "${searchQuery}"`);
+        const campaignDir = this.fileStore.getCampaignDirectory(settingName, campaignName);
+        const manualPath = `${campaignDir}/${manualType}-manual-chunks.json`;
+
+        if (!(await this.fileStore.fileExists(manualPath))) {
             return {
                 chunks: [],
                 totalMatches: 0,
@@ -62,10 +109,21 @@ export class ManualSearcher {
             };
         }
 
-        const chunkedManual: ChunkedManual = JSON.parse(fs.readFileSync(manualPath, 'utf-8'));
+        const manualContent = await this.fileStore.loadFile(manualPath);
+        if (!manualContent) {
+            return {
+                chunks: [],
+                totalMatches: 0,
+                searchQuery,
+                manualType
+            };
+        }
+        const chunkedManual: ChunkedManual = JSON.parse(manualContent);
         
         // Perform semantic search through chunks
         const relevantChunks = await this.searchChunks(chunkedManual.chunks, searchQuery, textGenerationClient);
+
+        console.log(`Found ${relevantChunks.length} relevant chunks via keyword search`);
         
         return {
             chunks: relevantChunks,
@@ -146,13 +204,20 @@ ${chunkSummaries.map((chunk, idx) => `${idx + 1}. ID: ${chunk.id}
    Path: ${chunk.path}
    Preview: ${chunk.preview}`).join('\n\n')}
 
-Return the chunk IDs as a JSON array of strings, ordered by relevance:
+Return the chunk IDs as a JSON object with a "response" field containing an array of strings, ordered by relevance:
+{"response": ["chunk_id_1", "chunk_id_2", "chunk_id_3", ...]}
 `;
 
         try {
-            const rankedIdsResponse = await textGenerationClient.generateText<string>(rankingPrompt);
-            // Parse the response to get the ranked IDs
-            const rankedIds = JSON.parse(rankedIdsResponse) as string[];
+            const rankedIdsResponse = await textGenerationClient.generateText<ChunkRankingResponse>(
+                rankingPrompt,
+                undefined,
+                { model: 'gemini-2.5-flash-lite' },
+                undefined,
+                CHUNK_RANKING_SCHEMA
+            );
+            // Get the ranked IDs from the response
+            const rankedIds = rankedIdsResponse.response;
             
             // Return chunks in the ranked order
             const rankedChunks: PdfChunk[] = [];

@@ -146,7 +146,8 @@ class GoogleClient implements ITextGenerationClient {
         prompt: string,
         tools: Tool[],
         chatHistory?: string[],
-        optionsOverride?: GenerateTextOptions
+        optionsOverride?: GenerateTextOptions,
+        schema?: Schema
     ): Promise<{ response: T | null; functionCalls: FunctionCall[] }> {
         const history = chatHistory ? chatHistory.map((message, index) => {
             return {
@@ -170,6 +171,10 @@ class GoogleClient implements ITextGenerationClient {
         
         if (optionsOverride?.toolConfig) {
             config.toolConfig = optionsOverride.toolConfig;
+        }
+
+        if (schema) {
+            config.responseSchema = schema;
         }
 
         const response = await chat.sendMessage({
@@ -199,7 +204,25 @@ class GoogleClient implements ITextGenerationClient {
                     args: part.functionCall.args || {}
                 });
             } else if (part.text) {
-                textResponse = part.text as T;
+                if (schema) {
+                    // If schema is provided, parse the JSON response
+                    try {
+                        // Remove markdown code block formatting if present
+                        let jsonText = part.text.trim();
+                        if (jsonText.startsWith('```json')) {
+                            jsonText = jsonText.replace(/^```json\s*/, '').replace(/\s*```$/, '');
+                        } else if (jsonText.startsWith('```')) {
+                            jsonText = jsonText.replace(/^```\s*/, '').replace(/\s*```$/, '');
+                        }
+                        textResponse = JSON.parse(jsonText) as T;
+                    } catch (error) {
+                        // Fallback to text if JSON parsing fails
+                        console.error(`Failed to parse structured output: ${error}`);
+                        textResponse = part.text as T;
+                    }
+                } else {
+                    textResponse = part.text as T;
+                }
             }
         }
 

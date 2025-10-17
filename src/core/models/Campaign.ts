@@ -1,4 +1,5 @@
 import * as t from 'io-ts';
+import { CampaignProgress } from './CampaignProgress';
 
 // Model class that represents a campaign
 class Campaign {
@@ -32,6 +33,7 @@ class Campaign {
         description: string;
         objective: string;
     }[];
+    progress?: CampaignProgress;
 
     constructor() {
         this.name = '';
@@ -47,6 +49,7 @@ class Campaign {
         this.characters = [];
         this.locations = [];
         this.milestones = [];
+        this.progress = new CampaignProgress();
     }
 }
 
@@ -89,6 +92,28 @@ const CampaignCodec = t.type({
             objective: t.string,
         })
     ),
+    progress: t.union([
+        t.type({
+            stage: t.string,
+            completedStages: t.array(t.string),
+            currentStageProgress: t.number,
+            totalStages: t.number,
+            storylineProgress: t.array(t.type({
+                milestoneIndex: t.number,
+                milestoneName: t.string,
+                completed: t.boolean,
+                error: t.union([t.string, t.undefined])
+            })),
+            lastUpdated: t.string,
+            error: t.union([t.string, t.undefined]),
+            pdfManuals: t.type({
+                playerManualPath: t.union([t.string, t.undefined]),
+                gmManualPath: t.union([t.string, t.undefined]),
+                processed: t.boolean
+            })
+        }),
+        t.undefined
+    ])
 });
 
 export { Campaign, CampaignCodec };

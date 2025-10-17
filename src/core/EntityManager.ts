@@ -137,14 +137,16 @@ class EntityManager implements IEntityManager {
         const character: Character = await this.textGenerationClient.generateText<Character>(
             prompt,
             [],
-            undefined,
+            { model: "gemini-2.5-flash-lite" }, // Use faster model for campaign generation
             undefined,
             CharacterSchema
         );
 
         // Generate context blob and strip fences
         const rawContext: string = await this.textGenerationClient.generateText<string>(
-            this.getContextPrompt(character)
+            this.getContextPrompt(character),
+            [],
+            { model: "gemini-2.5-flash-lite" } // Use faster model for campaign generation
         );
         const context: string = this.stripCodeFences(rawContext);
 
@@ -167,14 +169,16 @@ class EntityManager implements IEntityManager {
         const location: Location = await this.textGenerationClient.generateText<Location>(
             prompt,
             [],
-            undefined,
+            { model: "gemini-2.5-flash-lite" }, // Use faster model for campaign generation
             undefined,
             LocationSchema
         );
 
         // Generate context blob and strip fences
         const rawContext: string = await this.textGenerationClient.generateText<string>(
-            this.getContextPrompt(location)
+            this.getContextPrompt(location),
+            [],
+            { model: "gemini-2.5-flash-lite" } // Use faster model for campaign generation
         );
         const context: string = this.stripCodeFences(rawContext);
 
@@ -197,14 +201,16 @@ class EntityManager implements IEntityManager {
         const faction: Faction = await this.textGenerationClient.generateText<Faction>(
             prompt,
             [],
-            undefined,
+            { model: "gemini-2.5-flash-lite" }, // Use faster model for campaign generation
             undefined,
             FactionSchema
         );
 
         // Generate context blob and strip fences
         const rawContext: string = await this.textGenerationClient.generateText<string>(
-            this.getContextPrompt(faction)
+            this.getContextPrompt(faction),
+            [],
+            { model: "gemini-2.5-flash-lite" } // Use faster model for campaign generation
         );
         const context: string = this.stripCodeFences(rawContext);
 

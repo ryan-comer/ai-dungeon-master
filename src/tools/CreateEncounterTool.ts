@@ -374,7 +374,9 @@ class CreateEncounterTool implements ITool {
 
 
         return `
-        I want you to create an encounter for my players using the DND 5E rules.
+        I want you to create an encounter for my players for a tabletop rpg game.
+        The rules for the game are available to you through tools that you can call. Make sure to call the tools whenever you need the information or functionality they provide.
+        You will use your knowledge of RPG mechanics and storytelling techniques to create a balanced and enjoyable experience for the players.
         I will give you the context the players are in, and you will create an encounter for them.
         The encounter should be balanced and challenging for the players based on their level and abilities.
         Give the entities enough weapons, equipment, spells, and features so that they can perform well in the encounter, but make sure they make sense to have
@@ -456,7 +458,7 @@ class CreateEncounterTool implements ITool {
                     "imagePrompt": "Prompt for an image generator to create an image of the feature. This should be a detailed prompt that has a lot of information about the feature. The more detail the better."
                     }
                 ],
-                "cr": 1.0 // Challenge rating of the entity (floating point number, e.g. 1.0, 2.5, etc), this is standard for DnD and is used to determine the difficulty of the encounter
+                "cr": 1.0 // Challenge rating of the entity (floating point number, e.g. 1.0, 2.5, etc), this is used to determine the difficulty of the encounter
                 "size": "SIZE_OF_CHARACTER",    // ["tiny", "sm", "med", "lg", "huge", "grg"]
                 }
             ]

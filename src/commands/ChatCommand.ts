@@ -6,12 +6,10 @@ import { ChatMessage as DMChatMessage } from "../core/models/ChatMessage";
 import { MessageSchema } from "../core/models/google/MessageSchema";
 import { ITool } from "../tools/interfaces/ITool";
 import { GoogleClient } from "../generation/clients/GoogleClient";
-import { RAGManager } from "../core/RAGManager";
 
 class ChatCommand implements ICommand {
     name: string;
     description: string;
-    private ragManager: RAGManager | null = null;
 
     constructor() {
         this.name = "ChatCommand";
@@ -38,16 +36,8 @@ class ChatCommand implements ICommand {
         const setting = contextManager.getCurrentSetting();
         const campaign = contextManager.getCurrentCampaign();
         const canUseRAG = setting && campaign && 
-                         contextManager.textGenerationClient instanceof GoogleClient;
-
-        if (canUseRAG && !this.ragManager) {
-            // Initialize RAG manager if not already done
-            this.ragManager = new RAGManager(
-                contextManager.textGenerationClient as GoogleClient,
-                contextManager.fileStore,
-                contextManager.logger
-            );
-        }
+                         contextManager.textGenerationClient instanceof GoogleClient &&
+                         contextManager.ragManager;
 
         // Generate structured AI messages with JSON schema
         // Prepare simple chat history array
@@ -56,14 +46,14 @@ class ChatCommand implements ICommand {
         let aiMessages: DMChatMessage[] = [];
 
         try {
-            if (canUseRAG && this.ragManager && setting && campaign) {
+            if (canUseRAG && setting && campaign) {
                 // Use RAG-enhanced generation
                 contextManager.logger.info("Using RAG-enhanced generation for user message");
                 
                 // Create a comprehensive prompt that includes the user message and context
-                const ragPrompt = this.buildRAGPrompt(newMessageText, history);
+                const ragPrompt = this.buildRAGPrompt(newMessageText, history, userSpeaker);
                 
-                const ragResponse = await this.ragManager.generateWithRAG(
+                const ragResponse = await contextManager.ragManager!.generateWithRAG(
                     ragPrompt,
                     setting.name,
                     campaign.name,
@@ -72,13 +62,15 @@ class ChatCommand implements ICommand {
 
                 // Convert the RAG response to structured messages
                 if (ragResponse.finalResponse) {
-                    // Parse the final response as structured messages or create a narrator message
+                    // Second pass: convert RAG response to structured messages
                     try {
-                        // Try to parse as structured output first
                         aiMessages = await contextManager.textGenerationClient.generateText<DMChatMessage[]>(
-                            `Convert this response to structured chat messages:\n${ragResponse.finalResponse}`,
+                            `Convert this response to structured chat messages with appropriate speakers. 
+                            Only add another message if another speaker starts talking, don't create multiple messages in a row for the same speaker.:
+                            Here is the response:
+                            ${ragResponse.finalResponse}`,
                             [],
-                            undefined,
+                            {model: 'gemini-2.5-flash-lite'},
                             undefined,
                             MessageSchema
                         );
@@ -145,23 +137,24 @@ class ChatCommand implements ICommand {
     /**
      * Build a comprehensive prompt for RAG that includes context about the game state
      */
-    private buildRAGPrompt(userMessage: string, chatHistory: string[]): string {
-        const recentHistory = chatHistory.slice(-10).join('\n'); // Last 10 messages for context
-        
+    private buildRAGPrompt(userMessage: string, chatHistory: string[], playerName: string): string {
         return `
-You are an AI Dungeon Master running a tabletop RPG game. A player has just sent you this message:
+You are an AI Dungeon Master running a tabletop RPG game. The player "${playerName}" has just sent you this message:
 
 "${userMessage}"
 
-Recent conversation context:
-${recentHistory}
-
-Please respond as the Dungeon Master would. If you need specific information about rules, mechanics, spells, equipment, monsters, or other game content to provide an accurate response, you should search the relevant manuals.
+If you need specific information about rules, mechanics, spells, equipment, monsters, or other game content to provide an accurate response, you should search the relevant manuals.
 
 Use search_player_manual for information that players would typically know (character creation, spells, equipment, basic rules).
 Use search_gm_manual for information that is typically for the GM (monsters, NPCs, adventure content, advanced rules).
 
 Provide a complete and engaging response that moves the story forward and follows the established rules and lore of the game.
+Remember to return an array of dialogue.
+The DM dialogue should be them describing the world.
+The character dialogue should be that character talking.
+Don't have th DM dialogue include any characters talking. If the character needs to say something, then it should be in it's own dialogue
+
+Remember that "${playerName}" is the one who just spoke, so respond appropriately to their action or question.
 `;
     }
 

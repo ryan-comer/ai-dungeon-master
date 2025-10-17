@@ -13,6 +13,7 @@ import { Session } from "../models/Session";
 import { Player } from "../models/Player";
 import { SessionPlayer } from "../models/SessionPlayer";
 import { ChatMessage as DMChatMessage } from "../models/ChatMessage";
+import { RAGManager } from "../RAGManager";
 
 interface IContextManager {
     textGenerationClient: ITextGenerationClient;
@@ -21,6 +22,7 @@ interface IContextManager {
     fileStore: IFileStore;
     logger: ILogger
     tools: ITool[];
+    ragManager?: RAGManager;
 
     loadContext(setting: Setting, campaign: Campaign, session: Session): Promise<Context | null>;
     sendUserMessage(message: string, chatData: ChatData): Promise<void>;
