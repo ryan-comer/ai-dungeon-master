@@ -1,14 +1,13 @@
 import { ITool } from "./interfaces/ITool";
 
 import { IContextManager } from "../core/interfaces/IContextManager";
-// import RepeatJsonGeneration removed; using structured output instead
 import { Encounter } from "../core/models/Encounter";
 import { EncounterSchema } from "../core/models/google/EncounterSchema";
 import { Schema, Type } from '@google/genai';
 
 import { stripInvalidFilenameChars } from "../utils/utils";
-import { max } from "fp-ts/lib/ReadonlyNonEmptyArray";
-import { details } from "@league-of-foundry-developers/foundry-vtt-types/src/foundry/common/prosemirror/schema/other.mjs";
+import flux_battlemap from '../generation/comfy_templates/flux_battlemap.json' assert { type: "json" };
+import flux_character from '../generation/comfy_templates/flux_character.json' assert { type: "json" };
 
 class CreateEncounterTool implements ITool {
     name: string = "CreateEncounter";
@@ -114,7 +113,8 @@ class CreateEncounterTool implements ITool {
             const newPrompt: string = `DnD character token art of ${entity.tokenPrompt}, full body shot, solid white background`;
             const imageData = await contextManager.imageGenerationClient.generateImage(newPrompt, {
                 width: 1024,
-                height: 1024
+                height: 1024,
+                workflow: flux_character
             });
             const imagePath: string = `${baseEncounterPath}/${stripInvalidFilenameChars(entity.name)}.png`;
             const processedImage: string = await contextManager.imageGenerationClient.removeBackground(imageData);
@@ -301,7 +301,8 @@ class CreateEncounterTool implements ITool {
         const newPrompt: string = `RPGmap, Top down view. Birds eye view. From above. ${encounter.battlemapPrompt}`;
         const imageData = await contextManager.imageGenerationClient.generateImage(newPrompt, {
             width: backgroundWidth,
-            height: backgroundHeight
+            height: backgroundHeight,
+            workflow: flux_battlemap
         });
         const randomSuffix = Math.floor(Math.random() * 1000000); // Generate a random number
         const imagePath: string = `${baseEncounterPath}/battlemap_${randomSuffix}.png`;

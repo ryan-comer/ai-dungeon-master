@@ -1,6 +1,7 @@
 import { CoreManager } from "../src/core/CoreManager.ts";
 import { HidreamClient } from "../src/generation/clients/HidreamClient.ts";
 import { ForgeClient } from "../src/generation/clients/ForgeClient.ts";
+import { ComfyUIClient } from "../src/generation/clients/ComfyUIClient.ts";
 import { GoogleImageGen4Client } from "../src/generation/clients/GoogleImageGen4Client.ts";
 import { GoogleClient } from "../src/generation/clients/GoogleClient.ts";
 import { DiscordSpeechClient } from "../src/generation/clients/DiscordSpeechClient.ts";
@@ -15,7 +16,8 @@ export function getCoreManager() {
         const logger = new Logger();
         coreManagerInstance = new CoreManager(
             new GoogleClient(googleApiKey),
-            new ForgeClient(),
+            new ComfyUIClient("http://localhost:8188"),
+            //new ForgeClient(),
             //new HidreamClient(),
             //new GoogleImageGen4Client(googleApiKey),
             new DiscordSpeechClient(),

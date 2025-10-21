@@ -4,10 +4,11 @@
     "module": "ESNext",
     "esModuleInterop": true,
     "moduleResolution": "node",
+    "resolveJsonModule": true,
     "outDir": "./dist",
     "rootDir": "./src",
     "strict": true,
-    "types": ["@league-of-foundry-developers/foundry-vtt-types"]
+    "types": ["@league-of-foundry-developers/foundry-vtt-types", "node"]
   },
   "tsc-alias": {
     "resolveFullPaths": true,

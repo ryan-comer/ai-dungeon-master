@@ -3,6 +3,8 @@ import { IContextManager } from "../core/interfaces/IContextManager";
 import { stripInvalidFilenameChars } from "../utils/utils";
 import { Schema, Type } from '@google/genai';
 
+import flux_battlemap from '../generation/comfy_templates/flux_battlemap.json' assert { type: "json" };
+
 class SceneViewerTool implements ITool {
     name: string = "Scene Viewer Tool";
     description: string = `
@@ -34,7 +36,7 @@ class SceneViewerTool implements ITool {
             SceneSchema
         );
 
-        const image: string = await contextManager.imageGenerationClient.generateImage(scenePromptJson.prompt);
+        const image: string = await contextManager.imageGenerationClient.generateImage(scenePromptJson.prompt, { workflow: flux_battlemap });
         // Image path with random numbers to avoid overwriting
         const randomSuffix = Math.floor(Math.random() * 1000000); // Generate a random number
         const imagePath: string = `${contextManager.fileStore.getBasePath()}/scenes/${stripInvalidFilenameChars(scenePromptJson.name)}_${randomSuffix}.png`;
