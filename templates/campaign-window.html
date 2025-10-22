@@ -1,77 +1,67 @@
 <!-- Window for the player to create and manage campaigns -->
 <div id="campaign-window">
     <h1>Campaign Manager</h1>
-    
-    <!-- In-Progress Campaigns Section -->
-    <div id="in-progress-campaigns" class="section">
-        <h3>In-Progress Campaigns</h3>
-        <div id="progress-campaign-list">
-            <!-- Progress campaign entries will be dynamically populated -->
+
+    <!-- Tabs -->
+    <div class="adm-tabs">
+        <button class="adm-tab active" data-tab="settings">Settings</button>
+        <button class="adm-tab" data-tab="campaigns">Campaigns</button>
+        <button class="adm-tab" data-tab="sessions">Sessions</button>
+        <button class="adm-tab" data-tab="players">Players</button>
+    </div>
+
+    <!-- Settings Tab -->
+    <div id="tab-settings" class="adm-tab-pane active">
+        <div class="tab-context-note">Select or create a setting.</div>
+        <div id="settings-grid" class="entity-grid">
+            <!-- Settings will be rendered here as cards -->
+        </div>
+        <div id="setting-creation" class="create-section">
+            <label for="setting-prompt">Create a New Setting:</label>
+            <input type="text" id="setting-prompt" placeholder="Enter a prompt for the new setting" />
+            <button id="create-setting-btn">Create Setting</button>
         </div>
     </div>
-    
-    <hr />
-    
-    <div id="setting-selection">
-        <label for="setting-list">Select a Setting:</label>
-        <select id="setting-list">
-            <!-- Options will be dynamically populated -->
-        </select>
-    </div>
 
-    <div id="campaign-selection">
-        <label for="campaign-list">Select a Campaign:</label>
-        <select id="campaign-list">
-            <!-- Options will be dynamically populated -->
-        </select>
-    </div>
-
-    <div id="session-selection">
-        <label for="session-list">Select a Session:</label>
-        <select id="session-list">
-            <!-- Options will be dynamically populated -->
-        </select>
-    
-        <!-- Player Control Section -->
-        <div id="player-control-section">
-            <div id="player-list">
-                <!-- Player entries will be dynamically populated -->
-                <!-- Example:
-                <div class="player-item">
-                    <input type="checkbox" id="player-Alice" class="player-checkbox" data-player-name="Alice">
-                    <label for="player-Alice">Alice (AI Controlled)</label>
-                </div>
-                -->
+    <!-- Campaigns Tab -->
+    <div id="tab-campaigns" class="adm-tab-pane">
+        <div class="tab-context-note">Requires a selected setting.</div>
+        <div id="campaigns-grid" class="entity-grid">
+            <!-- Campaigns will be rendered here as cards -->
+        </div>
+        <div id="campaign-creation" class="create-section">
+            <label for="campaign-prompt">Create a New Campaign:</label>
+            <input type="text" id="campaign-prompt" placeholder="Enter a prompt for the new campaign" />
+            <!-- PDF upload inputs -->
+            <div id="manual-uploads" class="uploads">
+                <label for="player-manual-upload">Player Manual (PDF):</label>
+                <input type="file" id="player-manual-upload" accept="application/pdf" />
+                <label for="gm-manual-upload">GM Manual (PDF):</label>
+                <input type="file" id="gm-manual-upload" accept="application/pdf" />
             </div>
+            <button id="create-campaign-btn">Create Campaign</button>
         </div>
-        <button id="start-session-btn">Start Session</button>
     </div>
 
-    <div id="session-creation">
-        <label for="session-prompt">Create a New Session:</label>
-        <input type="text" id="session-prompt" placeholder="Enter a prompt for the new session" />
-        <button id="create-session-btn">Create Session</button>
-    </div>
-
-    <hr />
-
-    <div id="setting-creation">
-        <label for="setting-prompt">Create a New Setting:</label>
-        <input type="text" id="setting-prompt" placeholder="Enter a prompt for the new setting" />
-        <button id="create-setting-btn">Create Setting</button>
-    </div>
-    
-    <div id="campaign-creation">
-        <label for="campaign-prompt">Create a New Campaign:</label>
-        <input type="text" id="campaign-prompt" placeholder="Enter a prompt for the new campaign" />
-        <!-- PDF upload inputs -->
-        <div id="manual-uploads">
-            <label for="player-manual-upload">Player Manual (PDF):</label>
-            <input type="file" id="player-manual-upload" accept="application/pdf" />
-            <label for="gm-manual-upload">GM Manual (PDF):</label>
-            <input type="file" id="gm-manual-upload" accept="application/pdf" />
+    <!-- Sessions Tab -->
+    <div id="tab-sessions" class="adm-tab-pane">
+        <div class="tab-context-note">Requires a selected setting and campaign.</div>
+        <div id="sessions-grid" class="entity-grid">
+            <!-- Sessions will be rendered here as cards -->
         </div>
-        <button id="create-campaign-btn">Create Campaign</button>
+        <div id="session-creation" class="create-section">
+            <label for="session-prompt">Create a New Session:</label>
+            <input type="text" id="session-prompt" placeholder="Enter a prompt for the new session" />
+            <button id="create-session-btn">Create Session</button>
+        </div>
+    </div>
+
+    <!-- Players Tab -->
+    <div id="tab-players" class="adm-tab-pane">
+        <div class="tab-context-note">Manage available player characters. Independent from settings/campaigns/sessions.</div>
+        <div id="players-grid" class="entity-grid players-grid">
+            <!-- Player entries will be dynamically populated as cards with checkboxes -->
+        </div>
     </div>
 
     <hr />
