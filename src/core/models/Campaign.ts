@@ -1,119 +1,30 @@
 import * as t from 'io-ts';
 import { CampaignProgress } from './CampaignProgress';
 
-// Model class that represents a campaign
+// Lean Campaign model: only essential info + prompt
 class Campaign {
     name: string;
-    setting: string;
+    setting: string; // reference to Setting name
     description: string;
-    objectives: string[];
-    overview: {
-        description: string;
-        objective: string;
-        premise: string;
-    };
-    factions: {
-        name: string;
-        description: string;
-        motivation: string;
-    }[];
-    characters: {
-        name: string;
-        description: string;
-        role: string;
-    }[];
-    locations: {
-        name: string;
-        description: string;
-        features: string;
-        relevance: string;
-    }[];
-    milestones: {
-        name: string;
-        description: string;
-        objective: string;
-    }[];
+    prompt: string;
+    // Keep optional progress for backward-compat with store utilities (not used in lean mode)
     progress?: CampaignProgress;
 
-    constructor() {
-        this.name = '';
-        this.setting = '';
-        this.description = '';
-        this.objectives = [];
-        this.overview = {
-            description: '',
-            objective: '',
-            premise: '',
-        };
-        this.factions = [];
-        this.characters = [];
-        this.locations = [];
-        this.milestones = [];
-        this.progress = new CampaignProgress();
+    constructor(data?: Partial<Campaign>) {
+        this.name = data?.name ?? '';
+        this.setting = data?.setting ?? '';
+        this.description = data?.description ?? '';
+        this.prompt = data?.prompt ?? '';
+        this.progress = data?.progress; // intentionally undefined by default
     }
 }
 
 const CampaignCodec = t.type({
     name: t.string,
+    setting: t.string,
     description: t.string,
-    setting: t.union([t.string, t.undefined]),
-    objectives: t.array(t.string),
-    overview: t.type({
-        description: t.string,
-        objective: t.string,
-        premise: t.string,
-    }),
-    factions: t.array(
-        t.type({
-            name: t.string,
-            description: t.string,
-            motivation: t.string,
-        })
-    ),
-    characters: t.array(
-        t.type({
-            name: t.string,
-            description: t.string,
-            role: t.string,
-        })
-    ),
-    locations: t.array(
-        t.type({
-            name: t.string,
-            description: t.string,
-            features: t.string,
-            relevance: t.string,
-        })
-    ),
-    milestones: t.array(
-        t.type({
-            name: t.string,
-            description: t.string,
-            objective: t.string,
-        })
-    ),
-    progress: t.union([
-        t.type({
-            stage: t.string,
-            completedStages: t.array(t.string),
-            currentStageProgress: t.number,
-            totalStages: t.number,
-            storylineProgress: t.array(t.type({
-                milestoneIndex: t.number,
-                milestoneName: t.string,
-                completed: t.boolean,
-                error: t.union([t.string, t.undefined])
-            })),
-            lastUpdated: t.string,
-            error: t.union([t.string, t.undefined]),
-            pdfManuals: t.type({
-                playerManualPath: t.union([t.string, t.undefined]),
-                gmManualPath: t.union([t.string, t.undefined]),
-                processed: t.boolean
-            })
-        }),
-        t.undefined
-    ])
+    prompt: t.string,
+    // progress omitted from codec to avoid persisting it by default
 });
 
 export { Campaign, CampaignCodec };

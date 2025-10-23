@@ -38,24 +38,3 @@ const campaignPrompt: string = "The players have to defeat the evil Plankton. Gi
 
 //const settingPrompt: string = "The world of Pokemon";
 //const campaignPrompt: string = "The players have to stop a unique threat to the world of Pokemon";
-
-coreManager.createSetting(settingPrompt).then(async (setting: Setting) => {
-    await coreManager.createCampaign(setting.name, campaignPrompt).then(async (campaign: Campaign) => {
-        for (let i = 0; i < campaign.milestones.length; i++) {
-            await coreManager.createStoryline(setting.name, campaign.name, i, campaign.milestones[i].description);
-        }
-    })
-});
-
-/*
-coreManager.createSetting(settingPrompt).then(async (settingName: string) => {
-    await coreManager.createCampaign(settingName, campaignPrompt).then(async (campaignName: string) => {
-        const campaign: string = await coreManager.getCampaign(settingName, campaignName);
-        const campaignJson: any = JSON.parse(campaign);
-
-        for (let i = 0; i < campaignJson.milestones.length; i++) {
-            await coreManager.createStoryline(settingName, campaignName, i, campaignJson.milestones[i].description);
-        }
-    })
-})
-*/

@@ -5,7 +5,6 @@ import { Storyline } from '../models/Storyline';
 interface ICampaignManager {
     createSetting(userPrompt: string): Promise<Setting>;
     createCampaign(settingName: string, userPrompt: string, pdfManuals?: { playerManualFile?: File, gmManualFile?: File }): Promise<Campaign>;
-    createStoryline(settingName: string, campaignName: string, milestoneIndex: number, userPrompt: string): Promise<Storyline>;
     processPdfManuals(settingName: string, campaignName: string, playerManualPath?: string, gmManualPath?: string): Promise<void>;
     
     continueGeneration(setting: Setting, campaign: Campaign): Promise<Campaign>;

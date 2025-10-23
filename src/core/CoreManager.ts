@@ -211,15 +211,6 @@ class CoreManager implements ICoreManager {
         return this.fileStore.getInProgressCampaigns();
     }
 
-    async createStoryline(settingName: string, campaignName: string, milestoneIndex: number, userPrompt: string = ""): Promise<Storyline> {
-        return this.creationLock.runExclusive(async () => { // Use the lock
-            this.logger.info("Creating a storyline...");
-            const storyline: Storyline = await this.campaignManager.createStoryline(settingName, campaignName, milestoneIndex, userPrompt);
-            this.emit("storylineCreated", storyline); // Emit event
-            return storyline;
-        });
-    }
-
     async processPdfManuals(settingName: string, campaignName: string, playerManualPath?: string, gmManualPath?: string): Promise<void> {
         return this.creationLock.runExclusive(async () => { // Use the lock
             this.logger.info("Processing PDF manuals...");

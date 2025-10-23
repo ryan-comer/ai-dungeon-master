@@ -54,6 +54,7 @@ export class CampaignWindow extends Application {
         this.createSettingButton = html.find('#create-setting-btn');
         this.createCampaignButton = html.find('#create-campaign-btn');
         this.createSessionButton = html.find('#create-session-btn');
+    this.startSessionButton = html.find('#start-session-btn');
 
     this.sessionPrompt = html.find('#session-prompt');
     this.processingStatus = html.find('#processing-status');
@@ -61,6 +62,7 @@ export class CampaignWindow extends Application {
         this.createSettingButton.click(this._onCreateSetting.bind(this));
         this.createCampaignButton.click(this._onCreateCampaign.bind(this));
     this.createSessionButton.click(this._onCreateSession.bind(this));
+    this.startSessionButton.click(this._onStartSession.bind(this));
 
         // Tabs switching (scoped, custom classes)
         const tabs = html.find('.adm-tabs .adm-tab');
@@ -157,11 +159,9 @@ export class CampaignWindow extends Application {
             ui.notifications.info("Campaign creation started! You can monitor progress below and resume if needed.");
 
             await this.refreshCampaigns();
-            await this.refreshInProgressCampaigns();
         } catch (error) {
             console.error("Campaign creation failed:", error);
             ui.notifications.error("Campaign creation failed: " + error.message);
-            await this.refreshInProgressCampaigns(); // Refresh to show failed campaign
         } finally {
             this._setLoadingState(false, "Idle");
             createCampaignButton.disabled = false; // Re-enable button
@@ -236,6 +236,43 @@ export class CampaignWindow extends Application {
     }
 
     // Start session button removed from Players tab; players are independent
+    async _onStartSession(event) {
+        event.preventDefault();
+        const startBtn = this.startSessionButton;
+        startBtn.prop('disabled', true);
+        try {
+            const settingName = this.selectedSetting;
+            const campaignName = this.selectedCampaign;
+            const sessionName = this.selectedSession;
+            if (!settingName || !campaignName) {
+                ui.notifications.error("Please select a setting and campaign.");
+                return;
+            }
+            if (!sessionName) {
+                ui.notifications.error("Please select a session to start.");
+                return;
+            }
+
+            // Read player AI control flags from Players tab checkboxes
+            const players = [];
+            this.playersGrid.find('.player-checkbox').each((_, el) => {
+                const $el = $(el);
+                const name = $el.data('player-name');
+                const isAIControlled = $el.is(':checked');
+                players.push({ name, isAIControlled });
+            });
+
+            this._setLoadingState(true, `Starting session: ${sessionName}`);
+            await this.coreManager.startSession(settingName, campaignName, sessionName, players);
+            ui.notifications.info(`Session started: ${sessionName}`);
+        } catch (err) {
+            console.error("Failed to start session:", err);
+            ui.notifications.error(`Failed to start session: ${err.message || err}`);
+        } finally {
+            this._setLoadingState(false, "Idle");
+            startBtn.prop('disabled', false);
+        }
+    }
 
     _setLoadingState(isLoading, status) {
         this.loadingIcon.toggleClass('hidden', !isLoading);
